@@ -115,4 +115,10 @@ The DataSetJSONConverter4D API was developed and tested in Delphi XE5.
       FreeAndNil(vJSONObject);
     end;
 
+# Using DataSetJSONConverter4D  #
+
+Using this library will is very simple, you simply add the Search Path of your IDE or your project the following directories:
+
+- DataSetJSONConverter4Delphi\src\
+
 Analyze the unit tests they will assist you.
