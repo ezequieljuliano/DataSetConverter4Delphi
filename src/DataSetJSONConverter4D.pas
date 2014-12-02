@@ -4,6 +4,7 @@ interface
 
 uses
   System.SysUtils,
+  System.JSON,
   Data.DBXJSON,
   Data.SqlTimSt,
   Data.FmtBcd,
