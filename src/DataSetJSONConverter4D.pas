@@ -16,31 +16,49 @@ type
 
   TDataSetFieldType = (dsfUnknown, dsfJSONObject, dsfJSONArray);
 
-  IDataSetJSONConverter = interface
-    ['{52A3BE1E-5116-4A9A-A7B6-3AF0FCEB1D8E}']
-    function Source(const pDataSet: TDataSet): IDataSetJSONConverter; overload;
-    function Source(const pDataSet: TDataSet; const pOwnsObject: Boolean): IDataSetJSONConverter; overload;
-
-    function Source(const pJSON: TJSONObject): IDataSetJSONConverter; overload;
-    function Source(const pJSON: TJSONObject; const pOwnsObject: Boolean): IDataSetJSONConverter; overload;
-
-    function Source(const pJSON: TJSONArray): IDataSetJSONConverter; overload;
-    function Source(const pJSON: TJSONArray; const pOwnsObject: Boolean): IDataSetJSONConverter; overload;
+  IDataSetConverter = interface
+    ['{8D995E50-A1DC-4426-A603-762E1387E691}']
+    function Source(const pDataSet: TDataSet): IDataSetConverter; overload;
+    function Source(const pDataSet: TDataSet; const pOwnsDataSet: Boolean): IDataSetConverter; overload;
 
     function AsJSONObject(): TJSONObject;
     function AsJSONArray(): TJSONArray;
+  end;
+
+  IJSONConverter = interface
+    ['{1B020937-438E-483F-ACB1-44B8B2707500}']
+    function Source(const pJSON: TJSONObject): IJSONConverter; overload;
+    function Source(const pJSON: TJSONObject; const pOwnsJSON: Boolean): IJSONConverter; overload;
+
+    function Source(const pJSON: TJSONArray): IJSONConverter; overload;
+    function Source(const pJSON: TJSONArray; const pOwnsJSON: Boolean): IJSONConverter; overload;
 
     procedure ToDataSet(const pDataSet: TDataSet);
   end;
 
-function Marshal(): IDataSetJSONConverter;
+  IConverter = interface
+    ['{52A3BE1E-5116-4A9A-A7B6-3AF0FCEB1D8E}']
+    function DataSet(): IDataSetConverter; overload;
+    function DataSet(const pDataSet: TDataSet): IDataSetConverter; overload;
+    function DataSet(const pDataSet: TDataSet; const pOwnsDataSet: Boolean): IDataSetConverter; overload;
 
-function ISODateTimeToString(const pDateTime: TDateTime): string;
-function ISODateToString(const pDate: TDateTime): string;
-function ISOTimeToString(const pTime: TTime): string;
-function ISOStringToDateTime(const pDateTimeAsString: string): TDateTime;
-function ISOStringToDate(const pDateAsString: string): TDate;
-function ISOStringToTime(const pTimeAsString: string): TTime;
+    function JSON(): IJSONConverter; overload;
+    function JSON(const pJSON: TJSONObject): IJSONConverter; overload;
+    function JSON(const pJSON: TJSONObject; const pOwnsJSON: Boolean): IJSONConverter; overload;
+
+    function JSON(const pJSON: TJSONArray): IJSONConverter; overload;
+    function JSON(const pJSON: TJSONArray; const pOwnsJSON: Boolean): IJSONConverter; overload;
+  end;
+
+function Converter(): IConverter;
+
+function DateTimeToISOTimestamp(const pDateTime: TDateTime): string;
+function DateToISODate(const pDate: TDateTime): string;
+function TimeToISOTime(const pTime: TTime): string;
+
+function ISOTimestampToDateTime(const pDateTime: string): TDateTime;
+function ISODateToDate(const pDate: string): TDate;
+function ISOTimeToTime(const pTime: string): TTime;
 
 function NewDataSetField(const pDataSet: TDataSet; const pFieldType: TFieldType;
   const pFieldName: string; pSize: Integer = 0; const pOrigin: string = ''): TField;
@@ -49,38 +67,61 @@ implementation
 
 type
 
-  TDataSetJSONConverter = class(TInterfacedObject, IDataSetJSONConverter)
+  TDataSetConverter = class(TInterfacedObject, IDataSetConverter)
   private
     FSrcDataSet: TDataSet;
-    FSrcJSONObject: TJSONObject;
-    FSrcJSONArray: TJSONArray;
-    FOwnsObject: Boolean;
+    FOwnsDataSet: Boolean;
     function DataSetToJSONObject(const pDataSet: TDataSet): TJSONObject;
     function DataSetToJSONArray(const pDataSet: TDataSet): TJSONArray;
+    function GetDataSet(): TDataSet;
+  public
+    constructor Create();
+    destructor Destroy(); override;
+
+    function Source(const pDataSet: TDataSet): IDataSetConverter; overload;
+    function Source(const pDataSet: TDataSet; const pOwnsDataSet: Boolean): IDataSetConverter; overload;
+
+    function AsJSONObject(): TJSONObject;
+    function AsJSONArray(): TJSONArray;
+  end;
+
+  TJSONConverter = class(TInterfacedObject, IJSONConverter)
+  private
+    FSrcJSONObject: TJSONObject;
+    FSrcJSONArray: TJSONArray;
+    FOwnsJSON: Boolean;
     procedure JSONObjectToDataSet(const pJSON: TJSONObject; const pDataSet: TDataSet);
     procedure JSONArrayToDataSet(const pJSON: TJSONArray; const pDataSet: TDataSet);
   public
     constructor Create();
     destructor Destroy(); override;
 
-    function Source(const pDataSet: TDataSet): IDataSetJSONConverter; overload;
-    function Source(const pDataSet: TDataSet; const pOwnsObject: Boolean): IDataSetJSONConverter; overload;
+    function Source(const pJSON: TJSONObject): IJSONConverter; overload;
+    function Source(const pJSON: TJSONObject; const pOwnsJSON: Boolean): IJSONConverter; overload;
 
-    function Source(const pJSON: TJSONObject): IDataSetJSONConverter; overload;
-    function Source(const pJSON: TJSONObject; const pOwnsObject: Boolean): IDataSetJSONConverter; overload;
-
-    function Source(const pJSON: TJSONArray): IDataSetJSONConverter; overload;
-    function Source(const pJSON: TJSONArray; const pOwnsObject: Boolean): IDataSetJSONConverter; overload;
-
-    function AsJSONObject(): TJSONObject;
-    function AsJSONArray(): TJSONArray;
+    function Source(const pJSON: TJSONArray): IJSONConverter; overload;
+    function Source(const pJSON: TJSONArray; const pOwnsJSON: Boolean): IJSONConverter; overload;
 
     procedure ToDataSet(const pDataSet: TDataSet);
   end;
 
-function Marshal(): IDataSetJSONConverter;
+  TConverter = class(TInterfacedObject, IConverter)
+  public
+    function DataSet(): IDataSetConverter; overload;
+    function DataSet(const pDataSet: TDataSet): IDataSetConverter; overload;
+    function DataSet(const pDataSet: TDataSet; const pOwnsDataSet: Boolean): IDataSetConverter; overload;
+
+    function JSON(): IJSONConverter; overload;
+    function JSON(const pJSON: TJSONObject): IJSONConverter; overload;
+    function JSON(const pJSON: TJSONObject; const pOwnsJSON: Boolean): IJSONConverter; overload;
+
+    function JSON(const pJSON: TJSONArray): IJSONConverter; overload;
+    function JSON(const pJSON: TJSONArray; const pOwnsJSON: Boolean): IJSONConverter; overload;
+  end;
+
+function Converter(): IConverter;
 begin
-  Result := TDataSetJSONConverter.Create;
+  Result := TConverter.Create;
 end;
 
 function GetDataSetFieldType(const pDataSetField: TDataSetField): TDataSetFieldType;
@@ -97,7 +138,7 @@ begin
       Exit(TDataSetFieldType(vIndice));
 end;
 
-function ISODateTimeToString(const pDateTime: TDateTime): string;
+function DateTimeToISOTimestamp(const pDateTime: TDateTime): string;
 var
   vFS: TFormatSettings;
 begin
@@ -105,12 +146,12 @@ begin
   Result := FormatDateTime('yyyy-mm-dd hh:nn:ss', pDateTime, vFS);
 end;
 
-function ISODateToString(const pDate: TDateTime): string;
+function DateToISODate(const pDate: TDateTime): string;
 begin
   Result := FormatDateTime('YYYY-MM-DD', pDate);
 end;
 
-function ISOTimeToString(const pTime: TTime): string;
+function TimeToISOTime(const pTime: TTime): string;
 var
   vFS: TFormatSettings;
 begin
@@ -118,20 +159,20 @@ begin
   Result := FormatDateTime('hh:nn:ss', pTime, vFS);
 end;
 
-function ISOStringToDateTime(const pDateTimeAsString: string): TDateTime;
+function ISOTimestampToDateTime(const pDateTime: string): TDateTime;
 begin
-  Result := EncodeDateTime(StrToInt(Copy(pDateTimeAsString, 1, 4)), StrToInt(Copy(pDateTimeAsString, 6, 2)), StrToInt(Copy(pDateTimeAsString, 9, 2)),
-    StrToInt(Copy(pDateTimeAsString, 12, 2)), StrToInt(Copy(pDateTimeAsString, 15, 2)), StrToInt(Copy(pDateTimeAsString, 18, 2)), 0);
+  Result := EncodeDateTime(StrToInt(Copy(pDateTime, 1, 4)), StrToInt(Copy(pDateTime, 6, 2)), StrToInt(Copy(pDateTime, 9, 2)),
+    StrToInt(Copy(pDateTime, 12, 2)), StrToInt(Copy(pDateTime, 15, 2)), StrToInt(Copy(pDateTime, 18, 2)), 0);
 end;
 
-function ISOStringToDate(const pDateAsString: string): TDate;
+function ISODateToDate(const pDate: string): TDate;
 begin
-  Result := EncodeDate(StrToInt(Copy(pDateAsString, 1, 4)), StrToInt(Copy(pDateAsString, 6, 2)), StrToInt(Copy(pDateAsString, 9, 2)));
+  Result := EncodeDate(StrToInt(Copy(pDate, 1, 4)), StrToInt(Copy(pDate, 6, 2)), StrToInt(Copy(pDate, 9, 2)));
 end;
 
-function ISOStringToTime(const pTimeAsString: string): TTime;
+function ISOTimeToTime(const pTime: string): TTime;
 begin
-  Result := EncodeTime(StrToInt(Copy(pTimeAsString, 1, 2)), StrToInt(Copy(pTimeAsString, 4, 2)), StrToInt(Copy(pTimeAsString, 7, 2)), 0);
+  Result := EncodeTime(StrToInt(Copy(pTime, 1, 2)), StrToInt(Copy(pTime, 4, 2)), StrToInt(Copy(pTime, 7, 2)), 0);
 end;
 
 function NewDataSetField(const pDataSet: TDataSet; const pFieldType: TFieldType;
@@ -153,31 +194,25 @@ begin
     raise Exception.CreateFmt('Size not defined "%s".', [pFieldName]);
 end;
 
-{ TDataSetJSONConverter }
+{ TDataSetMarshal }
 
-function TDataSetJSONConverter.AsJSONArray: TJSONArray;
+function TDataSetConverter.AsJSONArray: TJSONArray;
 begin
-  if (FSrcDataSet = nil) then
-    raise EDataSetJSONConverterException.Create('DataSet Uninformed!');
-  Result := DataSetToJSONArray(FSrcDataSet);
+  Result := DataSetToJSONArray(GetDataSet());
 end;
 
-function TDataSetJSONConverter.AsJSONObject: TJSONObject;
+function TDataSetConverter.AsJSONObject: TJSONObject;
 begin
-  if (FSrcDataSet = nil) then
-    raise EDataSetJSONConverterException.Create('DataSet Uninformed!');
-  Result := DataSetToJSONObject(FSrcDataSet);
+  Result := DataSetToJSONObject(GetDataSet());
 end;
 
-constructor TDataSetJSONConverter.Create;
+constructor TDataSetConverter.Create;
 begin
   FSrcDataSet := nil;
-  FSrcJSONObject := nil;
-  FSrcJSONArray := nil;
-  FOwnsObject := False;
+  FOwnsDataSet := False;
 end;
 
-function TDataSetJSONConverter.DataSetToJSONArray(const pDataSet: TDataSet): TJSONArray;
+function TDataSetConverter.DataSetToJSONArray(const pDataSet: TDataSet): TJSONArray;
 var
   vBookMark: TBookmark;
 begin
@@ -201,7 +236,7 @@ begin
   end;
 end;
 
-function TDataSetJSONConverter.DataSetToJSONObject(const pDataSet: TDataSet): TJSONObject;
+function TDataSetConverter.DataSetToJSONObject(const pDataSet: TDataSet): TJSONObject;
 var
   vI: Integer;
   vKey: string;
@@ -231,7 +266,7 @@ begin
           begin
             if not pDataSet.Fields[vI].IsNull then
             begin
-              Result.AddPair(vKey, ISODateToString(pDataSet.Fields[vI].AsDateTime));
+              Result.AddPair(vKey, DateToISODate(pDataSet.Fields[vI].AsDateTime));
             end
             else
               Result.AddPair(vKey, TJSONNull.Create);
@@ -240,7 +275,7 @@ begin
           begin
             if not pDataSet.Fields[vI].IsNull then
             begin
-              Result.AddPair(vKey, ISODateTimeToString(pDataSet.Fields[vI].AsDateTime));
+              Result.AddPair(vKey, DateTimeToISOTimestamp(pDataSet.Fields[vI].AsDateTime));
             end
             else
               Result.AddPair(vKey, TJSONNull.Create);
@@ -291,12 +326,47 @@ begin
   end;
 end;
 
-destructor TDataSetJSONConverter.Destroy;
+destructor TDataSetConverter.Destroy;
 begin
-  if FOwnsObject then
-  begin
+  if FOwnsDataSet then
     if (FSrcDataSet <> nil) then
       FreeAndNil(FSrcDataSet);
+  inherited Destroy();
+end;
+
+function TDataSetConverter.GetDataSet: TDataSet;
+begin
+  if (FSrcDataSet = nil) then
+    raise EDataSetJSONConverterException.Create('DataSet Uninformed!');
+  Result := FSrcDataSet;
+end;
+
+function TDataSetConverter.Source(const pDataSet: TDataSet): IDataSetConverter;
+begin
+  FSrcDataSet := pDataSet;
+  Result := Self;
+end;
+
+function TDataSetConverter.Source(const pDataSet: TDataSet;
+  const pOwnsDataSet: Boolean): IDataSetConverter;
+begin
+  FOwnsDataSet := pOwnsDataSet;
+  Result := Source(pDataSet);
+end;
+
+{ TJSONMarshal }
+
+constructor TJSONConverter.Create;
+begin
+  FSrcJSONObject := nil;
+  FSrcJSONArray := nil;
+  FOwnsJSON := False;
+end;
+
+destructor TJSONConverter.Destroy;
+begin
+  if FOwnsJSON then
+  begin
     if (FSrcJSONObject <> nil) then
       FreeAndNil(FSrcJSONObject);
     if (FSrcJSONArray <> nil) then
@@ -305,8 +375,7 @@ begin
   inherited Destroy();
 end;
 
-procedure TDataSetJSONConverter.JSONArrayToDataSet(const pJSON: TJSONArray;
-  const pDataSet: TDataSet);
+procedure TJSONConverter.JSONArrayToDataSet(const pJSON: TJSONArray; const pDataSet: TDataSet);
 var
   vJv: TJSONValue;
 begin
@@ -320,8 +389,7 @@ begin
   end;
 end;
 
-procedure TDataSetJSONConverter.JSONObjectToDataSet(const pJSON: TJSONObject;
-  const pDataSet: TDataSet);
+procedure TJSONConverter.JSONObjectToDataSet(const pJSON: TJSONObject; const pDataSet: TDataSet);
 var
   vField: TField;
   vJv: TJSONValue;
@@ -360,21 +428,21 @@ begin
             if vJv is TJSONNull then
               vField.Clear
             else
-              vField.AsDateTime := ISOStringToDate(vJv.Value);
+              vField.AsDateTime := ISODateToDate(vJv.Value);
           end;
         TFieldType.ftDateTime:
           begin
             if vJv is TJSONNull then
               vField.Clear
             else
-              vField.AsDateTime := ISOStringToDateTime(vJv.Value);
+              vField.AsDateTime := ISOTimestampToDateTime(vJv.Value);
           end;
         TFieldType.ftTimeStamp, TFieldType.ftTime:
           begin
             if vJv is TJSONNull then
               vField.Clear
             else
-              vField.AsDateTime := ISOStringToTime(vJv.Value);
+              vField.AsDateTime := ISOTimeToTime(vJv.Value);
           end;
         TFieldType.ftDataSet:
           begin
@@ -395,46 +463,31 @@ begin
   end;
 end;
 
-function TDataSetJSONConverter.Source(const pDataSet: TDataSet;
-  const pOwnsObject: Boolean): IDataSetJSONConverter;
+function TJSONConverter.Source(const pJSON: TJSONObject; const pOwnsJSON: Boolean): IJSONConverter;
 begin
-  FOwnsObject := pOwnsObject;
-  Result := Source(pDataSet);
+  FOwnsJSON := pOwnsJSON;
+  Result := Source(pJSON);
 end;
 
-function TDataSetJSONConverter.Source(const pDataSet: TDataSet): IDataSetJSONConverter;
-begin
-  FSrcDataSet := pDataSet;
-  Result := Self;
-end;
-
-function TDataSetJSONConverter.Source(const pJSON: TJSONObject): IDataSetJSONConverter;
+function TJSONConverter.Source(const pJSON: TJSONObject): IJSONConverter;
 begin
   FSrcJSONObject := pJSON;
   Result := Self;
 end;
 
-function TDataSetJSONConverter.Source(const pJSON: TJSONArray;
-  const pOwnsObject: Boolean): IDataSetJSONConverter;
+function TJSONConverter.Source(const pJSON: TJSONArray; const pOwnsJSON: Boolean): IJSONConverter;
 begin
-  FOwnsObject := pOwnsObject;
+  FOwnsJSON := pOwnsJSON;
   Result := Source(pJSON);
 end;
 
-function TDataSetJSONConverter.Source(const pJSON: TJSONArray): IDataSetJSONConverter;
+function TJSONConverter.Source(const pJSON: TJSONArray): IJSONConverter;
 begin
   FSrcJSONArray := pJSON;
   Result := Self;
 end;
 
-function TDataSetJSONConverter.Source(const pJSON: TJSONObject;
-  const pOwnsObject: Boolean): IDataSetJSONConverter;
-begin
-  FOwnsObject := pOwnsObject;
-  Result := Source(pJSON);
-end;
-
-procedure TDataSetJSONConverter.ToDataSet(const pDataSet: TDataSet);
+procedure TJSONConverter.ToDataSet(const pDataSet: TDataSet);
 begin
   if (FSrcJSONObject <> nil) then
     JSONObjectToDataSet(FSrcJSONObject, pDataSet)
@@ -442,6 +495,48 @@ begin
     JSONArrayToDataSet(FSrcJSONArray, pDataSet)
   else
     raise EDataSetJSONConverterException.Create('JSON Value Uninformed!');
+end;
+
+{ TMarshal }
+
+function TConverter.DataSet: IDataSetConverter;
+begin
+  Result := TDataSetConverter.Create;
+end;
+
+function TConverter.DataSet(const pDataSet: TDataSet): IDataSetConverter;
+begin
+  Result := DataSet().Source(pDataSet);
+end;
+
+function TConverter.DataSet(const pDataSet: TDataSet; const pOwnsDataSet: Boolean): IDataSetConverter;
+begin
+  Result := DataSet().Source(pDataSet, pOwnsDataSet);
+end;
+
+function TConverter.JSON(const pJSON: TJSONObject): IJSONConverter;
+begin
+  Result := JSON().Source(pJSON);
+end;
+
+function TConverter.JSON: IJSONConverter;
+begin
+  Result := TJSONConverter.Create;
+end;
+
+function TConverter.JSON(const pJSON: TJSONObject; const pOwnsJSON: Boolean): IJSONConverter;
+begin
+  Result := JSON().Source(pJSON, pOwnsJSON);
+end;
+
+function TConverter.JSON(const pJSON: TJSONArray; const pOwnsJSON: Boolean): IJSONConverter;
+begin
+  Result := JSON().Source(pJSON, pOwnsJSON);
+end;
+
+function TConverter.JSON(const pJSON: TJSONArray): IJSONConverter;
+begin
+  Result := JSON().Source(pJSON);
 end;
 
 end.

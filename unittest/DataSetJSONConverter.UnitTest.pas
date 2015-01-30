@@ -95,10 +95,10 @@ begin
   FCdsCustomers.FieldByName('Birth').AsDateTime := StrToDateTime('22/01/2014 14:05:03');
   FCdsCustomers.Post;
 
-  vJSONArray := Marshal.Source(FCdsCustomers).AsJSONArray;
+  vJSONArray := Converter.DataSet(FCdsCustomers).AsJSONArray;
   CheckEqualsString(cJSONArray, vJSONArray.ToString);
 
-  vJSONObject := Marshal.Source(FCdsCustomers).AsJSONObject;
+  vJSONObject := Converter.DataSet.Source(FCdsCustomers).AsJSONObject;
   CheckEqualsString(cJSONObject, vJSONObject.ToString);
 
   FreeAndNil(vJSONArray);
@@ -141,7 +141,7 @@ begin
 
   FCdsSales.Post;
 
-  vJSONObject := Marshal.Source(FCdsSales).AsJSONObject;
+  vJSONObject := Converter.DataSet(FCdsSales).AsJSONObject;
   CheckEqualsString(cJSON, vJSONObject.ToString);
 
   FreeAndNil(vJSONObject);
@@ -164,12 +164,12 @@ begin
   vJSONArray := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(cJSONArray), 0) as TJSONArray;
   vJSONObject := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(cJSONObject), 0) as TJSONObject;
 
-  Marshal.Source(vJSONObject).ToDataSet(FCdsCustomers);
+  Converter.JSON(vJSONObject).ToDataSet(FCdsCustomers);
   CheckFalse(FCdsCustomers.IsEmpty);
 
   FCdsCustomers.EmptyDataSet;
 
-  Marshal.Source(vJSONArray).ToDataSet(FCdsCustomers);
+  Converter.JSON.Source(vJSONArray).ToDataSet(FCdsCustomers);
   CheckFalse(FCdsCustomers.IsEmpty);
 
   FreeAndNil(vJSONArray);
@@ -188,7 +188,7 @@ var
 begin
   vJSONObject := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(cJSON), 0) as TJSONObject;
 
-  Marshal.Source(vJSONObject).ToDataSet(FCdsSales);
+  Converter.JSON(vJSONObject).ToDataSet(FCdsSales);
 
   CheckFalse(FCdsSales.IsEmpty);
   CheckFalse(FCdsCustomers.IsEmpty);
@@ -210,7 +210,7 @@ begin
 
   vJSONArray := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(cJSONArray), 0) as TJSONArray;
 
-  Marshal.Source(vJSONArray, True).ToDataSet(FCdsCustomers);
+  Converter.JSON.Source(vJSONArray, True).ToDataSet(FCdsCustomers);
   CheckFalse(FCdsCustomers.IsEmpty);
 end;
 
