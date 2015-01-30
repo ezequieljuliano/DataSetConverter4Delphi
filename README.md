@@ -47,7 +47,12 @@ Convert JSON to DataSet
 First you must have your DataSet and its Fields created.
     
     uses DataSetJSONConverter4D; 
-    
+    const
+      cJSONArray =
+         '[{"Id":1,"Name":"Customers 1","Birth":"2014-01-22 14:05:03"},' +
+         '{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}]';
+      cJSONObject =
+         '{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}';
     var
       vJSONArray: TJSONArray;
       vJSONObject: TJSONObject;
