@@ -17,7 +17,6 @@ program DataSetJSONConverter4DTests;
 uses
   DUnitTestRunner,
   DataSetJSONConverter4D in '..\src\DataSetJSONConverter4D.pas',
-  DataSetJSONConverter4D.Util in '..\src\DataSetJSONConverter4D.Util.pas',
   DataSetJSONConverter.UnitTest in 'DataSetJSONConverter.UnitTest.pas';
 
 {$R *.RES}

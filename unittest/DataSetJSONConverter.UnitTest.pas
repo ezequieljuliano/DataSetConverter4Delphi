@@ -6,10 +6,10 @@ uses
   TestFramework,
   System.Classes,
   System.SysUtils,
+  System.JSON,
   Datasnap.DBClient,
-  DataSetJSONConverter4D.Util,
   DataSetJSONConverter4D,
-  Data.DB, Data.DBXJSON;
+  Data.DB;
 
 type
 
@@ -27,6 +27,8 @@ type
 
     procedure TestConvertJSONToDataSetBasic();
     procedure TestConvertJSONToDataSetComplex();
+
+    procedure TestConvertJSONToDataSetOwnsObject();
   end;
 
 implementation
@@ -37,23 +39,23 @@ procedure TTestsDataSetJSONConverter.SetUp;
 begin
   inherited;
   FCdsSales := TClientDataSet.Create(nil);
-  TDataSetJSONConverterUtil.NewField(FCdsSales, ftInteger, 'Id');
-  TDataSetJSONConverterUtil.NewField(FCdsSales, ftString, 'Description', 100);
-  TDataSetJSONConverterUtil.NewField(FCdsSales, ftDate, 'Date');
-  TDataSetJSONConverterUtil.NewField(FCdsSales, ftTime, 'Time');
-  TDataSetJSONConverterUtil.NewField(FCdsSales, ftDataSet, 'Customers', 0, 'JSONObject');
-  TDataSetJSONConverterUtil.NewField(FCdsSales, ftDataSet, 'Products', 0, 'JSONArray');
+  NewDataSetField(FCdsSales, ftInteger, 'Id');
+  NewDataSetField(FCdsSales, ftString, 'Description', 100);
+  NewDataSetField(FCdsSales, ftDate, 'Date');
+  NewDataSetField(FCdsSales, ftTime, 'Time');
+  NewDataSetField(FCdsSales, ftDataSet, 'Customers', 0, 'JSONObject');
+  NewDataSetField(FCdsSales, ftDataSet, 'Products', 0, 'JSONArray');
 
   FCdsCustomers := TClientDataSet.Create(nil);
-  TDataSetJSONConverterUtil.NewField(FCdsCustomers, ftInteger, 'Id');
-  TDataSetJSONConverterUtil.NewField(FCdsCustomers, ftString, 'Name', 100);
-  TDataSetJSONConverterUtil.NewField(FCdsCustomers, ftDateTime, 'Birth');
+  NewDataSetField(FCdsCustomers, ftInteger, 'Id');
+  NewDataSetField(FCdsCustomers, ftString, 'Name', 100);
+  NewDataSetField(FCdsCustomers, ftDateTime, 'Birth');
   FCdsCustomers.DataSetField := TDataSetField(FCdsSales.FieldByName('Customers'));
 
   FCdsProducts := TClientDataSet.Create(nil);
-  TDataSetJSONConverterUtil.NewField(FCdsProducts, ftInteger, 'Id');
-  TDataSetJSONConverterUtil.NewField(FCdsProducts, ftString, 'Description', 100);
-  TDataSetJSONConverterUtil.NewField(FCdsProducts, ftFloat, 'Value');
+  NewDataSetField(FCdsProducts, ftInteger, 'Id');
+  NewDataSetField(FCdsProducts, ftString, 'Description', 100);
+  NewDataSetField(FCdsProducts, ftFloat, 'Value');
   FCdsProducts.DataSetField := TDataSetField(FCdsSales.FieldByName('Products'));
 
   FCdsSales.CreateDataSet;
@@ -69,8 +71,11 @@ end;
 
 procedure TTestsDataSetJSONConverter.TestConvertDataSetToJSONBasic;
 const
-  cJSONArray = '[{"Id":1,"Name":"Customers 1","Birth":"2014-01-22 14:05:03"},{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}]';
-  cJSONObject = '{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}';
+  cJSONArray =
+    '[{"Id":1,"Name":"Customers 1","Birth":"2014-01-22 14:05:03"},' +
+    '{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}]';
+  cJSONObject =
+    '{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}';
 var
   vJSONArray: TJSONArray;
   vJSONObject: TJSONObject;
@@ -90,11 +95,10 @@ begin
   FCdsCustomers.FieldByName('Birth').AsDateTime := StrToDateTime('22/01/2014 14:05:03');
   FCdsCustomers.Post;
 
-  TDataSetJSONConverter.UnMarshalToJSON(FCdsCustomers, vJSONArray);
+  vJSONArray := Marshal.Source(FCdsCustomers).AsJSONArray;
   CheckEqualsString(cJSONArray, vJSONArray.ToString);
 
-  FCdsCustomers.Last;
-  TDataSetJSONConverter.UnMarshalToJSON(FCdsCustomers, vJSONObject);
+  vJSONObject := Marshal.Source(FCdsCustomers).AsJSONObject;
   CheckEqualsString(cJSONObject, vJSONObject.ToString);
 
   FreeAndNil(vJSONArray);
@@ -103,9 +107,11 @@ end;
 
 procedure TTestsDataSetJSONConverter.TestConvertDataSetToJSONComplex;
 const
-  cJSON = '{"Id":1,"Description":"Sales 1","Date":"2014-01-22","Time":"14:03:03",' +
+  cJSON =
+    '{"Id":1,"Description":"Sales 1","Date":"2014-01-22","Time":"14:03:03",' +
     '"Customers":{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"},' +
-    '"Products":[{"Id":1,"Description":"Product 1","Value":100},{"Id":2,"Description":"Product 2","Value":200}]}';
+    '"Products":[{"Id":1,"Description":"Product 1","Value":100},' +
+    '{"Id":2,"Description":"Product 2","Value":200}]}';
 var
   vJSONObject: TJSONObject;
 begin
@@ -135,7 +141,7 @@ begin
 
   FCdsSales.Post;
 
-  TDataSetJSONConverter.UnMarshalToJSON(FCdsSales, vJSONObject);
+  vJSONObject := Marshal.Source(FCdsSales).AsJSONObject;
   CheckEqualsString(cJSON, vJSONObject.ToString);
 
   FreeAndNil(vJSONObject);
@@ -143,8 +149,11 @@ end;
 
 procedure TTestsDataSetJSONConverter.TestConvertJSONToDataSetBasic;
 const
-  cJSONArray = '[{"Id":1,"Name":"Customers 1","Birth":"2014-01-22 14:05:03"},{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}]';
-  cJSONObject = '{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}';
+  cJSONArray =
+    '[{"Id":1,"Name":"Customers 1","Birth":"2014-01-22 14:05:03"},' +
+    '{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}]';
+  cJSONObject =
+    '{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}';
 var
   vJSONArray: TJSONArray;
   vJSONObject: TJSONObject;
@@ -155,11 +164,12 @@ begin
   vJSONArray := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(cJSONArray), 0) as TJSONArray;
   vJSONObject := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(cJSONObject), 0) as TJSONObject;
 
-  TJSONDataSetConverter.UnMarshalToDataSet(vJSONObject, FCdsCustomers);
+  Marshal.Source(vJSONObject).ToDataSet(FCdsCustomers);
   CheckFalse(FCdsCustomers.IsEmpty);
 
   FCdsCustomers.EmptyDataSet;
-  TJSONDataSetConverter.UnMarshalToDataSet(vJSONArray, FCdsCustomers);
+
+  Marshal.Source(vJSONArray).ToDataSet(FCdsCustomers);
   CheckFalse(FCdsCustomers.IsEmpty);
 
   FreeAndNil(vJSONArray);
@@ -168,21 +178,40 @@ end;
 
 procedure TTestsDataSetJSONConverter.TestConvertJSONToDataSetComplex;
 const
-  cJSON = '{"Id":1,"Description":"Sales 1","Date":"2014-01-22","Time":"14:03:03",' +
+  cJSON =
+    '{"Id":1,"Description":"Sales 1","Date":"2014-01-22","Time":"14:03:03",' +
     '"Customers":{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"},' +
-    '"Products":[{"Id":1,"Description":"Product 1","Value":100},{"Id":2,"Description":"Product 2","Value":200}]}';
+    '"Products":[{"Id":1,"Description":"Product 1","Value":100},' +
+    '{"Id":2,"Description":"Product 2","Value":200}]}';
 var
   vJSONObject: TJSONObject;
 begin
   vJSONObject := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(cJSON), 0) as TJSONObject;
 
-  TJSONDataSetConverter.UnMarshalToDataSet(vJSONObject, FCdsSales);
+  Marshal.Source(vJSONObject).ToDataSet(FCdsSales);
 
   CheckFalse(FCdsSales.IsEmpty);
   CheckFalse(FCdsCustomers.IsEmpty);
   CheckFalse(FCdsProducts.IsEmpty);
 
   FreeAndNil(vJSONObject);
+end;
+
+procedure TTestsDataSetJSONConverter.TestConvertJSONToDataSetOwnsObject;
+const
+  cJSONArray =
+    '[{"Id":1,"Name":"Customers 1","Birth":"2014-01-22 14:05:03"},' +
+    '{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}]';
+var
+  vJSONArray: TJSONArray;
+begin
+  FCdsCustomers.DataSetField := nil;
+  FCdsCustomers.CreateDataSet;
+
+  vJSONArray := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(cJSONArray), 0) as TJSONArray;
+
+  Marshal.Source(vJSONArray, True).ToDataSet(FCdsCustomers);
+  CheckFalse(FCdsCustomers.IsEmpty);
 end;
 
 initialization
