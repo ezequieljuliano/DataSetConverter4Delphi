@@ -14,6 +14,7 @@ type
 
   EDataSetJSONConverterException = class(Exception);
 
+  TBooleanFieldType = (bfUnknown, bfBoolean, bfInteger);
   TDataSetFieldType = (dsfUnknown, dsfJSONObject, dsfJSONArray);
 
   IDataSetConverter = interface
@@ -124,6 +125,20 @@ begin
   Result := TConverter.Create;
 end;
 
+function GetBooleanFieldType(const pBooleanField: TBooleanField): TBooleanFieldType;
+const
+  cDescBooleanFieldType: array [TBooleanFieldType] of string = ('Unknown', 'Boolean', 'Integer');
+var
+  vIndice: Integer;
+  vOrigin: string;
+begin
+  Result := bfUnknown;
+  vOrigin := Trim(pBooleanField.Origin);
+  for vIndice := Ord(Low(TBooleanFieldType)) to Ord(High(TBooleanFieldType)) do
+    if (LowerCase(cDescBooleanFieldType[TBooleanFieldType(vIndice)]) = LowerCase(vOrigin)) then
+      Exit(TBooleanFieldType(vIndice));
+end;
+
 function GetDataSetFieldType(const pDataSetField: TDataSetField): TDataSetFieldType;
 const
   cDescDataSetFieldType: array [TDataSetFieldType] of string = ('Unknown', 'JSONObject', 'JSONArray');
@@ -190,8 +205,8 @@ begin
   Result.Size := pSize;
   Result.Origin := pOrigin;
 
-  if (pFieldType = ftString) and (pSize <= 0) then
-    raise Exception.CreateFmt('Size not defined "%s".', [pFieldName]);
+  if (pFieldType in [ftString, ftWideString]) and (pSize <= 0) then
+    raise Exception.CreateFmt('Size not defined for field "%s".', [pFieldName]);
 end;
 
 { TDataSetMarshal }
@@ -243,6 +258,15 @@ var
   vTs: TSQLTimeStamp;
   vNestedDataSet: TDataSet;
   vTypeDataSetField: TDataSetFieldType;
+  vTypeBooleanField: TBooleanFieldType;
+
+  function __BooleanToJSON(const AValue: Boolean): TJSONValue;
+  begin
+    if AValue
+    then Result := TJSONTrue.Create
+    else Result := TJSONFalse.Create;
+  end;
+
 begin
   Result := nil;
   if (pDataSet <> nil) and (not pDataSet.IsEmpty) then
@@ -252,6 +276,15 @@ begin
     begin
       vKey := pDataSet.Fields[vI].FieldName;
       case pDataSet.Fields[vI].DataType of
+        TFieldType.ftBoolean:
+          begin
+            vTypeBooleanField := GetBooleanFieldType(TBooleanField(pDataSet.Fields[vI]));
+            case vTypeBooleanField of
+              bfUnknown,
+              bfBoolean: Result.AddPair(vKey, __BooleanToJSON(pDataSet.Fields[vI].AsBoolean));
+              bfInteger: Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[vI].AsInteger));
+            end;
+          end;
         TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
           Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[vI].AsInteger));
         TFieldType.ftLargeint:
@@ -260,7 +293,7 @@ begin
           end;
         TFieldType.ftSingle, TFieldType.ftFloat:
           Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[vI].AsFloat));
-        ftString, ftWideString, ftMemo:
+        ftString, ftWideString, ftMemo, ftWideMemo:
           Result.AddPair(vKey, pDataSet.Fields[vI].AsWideString);
         TFieldType.ftDate:
           begin
@@ -320,7 +353,7 @@ begin
             end;
           end
       else
-        raise EDataSetJSONConverterException.Create('Cannot find type for field ' + vKey);
+        raise EDataSetJSONConverterException.CreateFmt('Cannot find type for field "%s"', [vKey]);
       end;
     end;
   end;
@@ -395,6 +428,7 @@ var
   vJv: TJSONValue;
   vTypeDataSet: TDataSetFieldType;
   vNestedDataSet: TDataSet;
+  b: Boolean;
 begin
   if (pJSON <> nil) and (pDataSet <> nil) then
   begin
@@ -407,6 +441,11 @@ begin
       else
         Continue;
       case vField.DataType of
+        TFieldType.ftBoolean:
+          begin
+            if vJv.TryGetValue<Boolean>(b) then
+              vField.AsBoolean := b;
+          end;
         TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
           begin
             vField.AsInteger := StrToIntDef(vJv.Value, 0);
@@ -415,11 +454,19 @@ begin
           begin
             vField.AsLargeInt := StrToInt64Def(vJv.Value, 0);
           end;
-        TFieldType.ftSingle, TFieldType.ftFloat, TFieldType.ftCurrency, TFieldType.ftFMTBcd:
+        TFieldType.ftCurrency:
+          begin
+            vField.AsCurrency := (vJv as TJSONNumber).AsDouble;
+          end;
+        TFieldType.ftSingle:
+          begin
+            vField.AsSingle := (vJv as TJSONNumber).AsDouble;
+          end;
+        TFieldType.ftFloat, TFieldType.ftFMTBcd:
           begin
             vField.AsFloat := (vJv as TJSONNumber).AsDouble;
           end;
-        ftString, ftWideString, ftMemo:
+        ftString, ftWideString, ftMemo, ftWideMemo:
           begin
             vField.AsString := vJv.Value;
           end;
@@ -456,7 +503,7 @@ begin
             end;
           end
       else
-        raise EDataSetJSONConverterException.Create('Cannot find type for field ' + vField.FieldName);
+        raise EDataSetJSONConverterException.CreateFmt('Cannot find type for field "%s"', [vField.FieldName]);
       end;
     end;
     pDataSet.Post;
