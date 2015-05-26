@@ -209,7 +209,7 @@ begin
     raise Exception.CreateFmt('Size not defined for field "%s".', [pFieldName]);
 end;
 
-{ TDataSetMarshal }
+{ TDataSetConverter }
 
 function TDataSetConverter.AsJSONArray: TJSONArray;
 begin
@@ -387,7 +387,7 @@ begin
   Result := Source(pDataSet);
 end;
 
-{ TJSONMarshal }
+{ TJSONConverter }
 
 constructor TJSONConverter.Create;
 begin
@@ -544,7 +544,7 @@ begin
     raise EDataSetJSONConverterException.Create('JSON Value Uninformed!');
 end;
 
-{ TMarshal }
+{ TConverter }
 
 function TConverter.DataSet: IDataSetConverter;
 begin
