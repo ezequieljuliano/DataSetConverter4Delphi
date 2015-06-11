@@ -35,6 +35,7 @@ type
     function Source(const pJSON: TJSONArray; const pOwnsJSON: Boolean): IJSONConverter; overload;
 
     procedure ToDataSet(const pDataSet: TDataSet);
+    procedure ToRecord(const pDataSet: TDataSet);
   end;
 
   IConverter = interface
@@ -49,6 +50,17 @@ type
 
     function JSON(const pJSON: TJSONArray): IJSONConverter; overload;
     function JSON(const pJSON: TJSONArray; const pOwnsJSON: Boolean): IJSONConverter; overload;
+  end;
+
+  TDataSetConverterHelper = class helper for TDataSet
+  public
+    function AsJSONObject(): TJSONObject;
+    function AsJSONArray(): TJSONArray;
+
+    procedure FromJSONObject(const pJSON: TJSONObject);
+    procedure FromJSONArray(const pJSON: TJSONArray);
+
+    procedure RecordFromJSONObject(const pJSON: TJSONObject);
   end;
 
 function Converter(): IConverter;
@@ -91,6 +103,7 @@ type
     FSrcJSONObject: TJSONObject;
     FSrcJSONArray: TJSONArray;
     FOwnsJSON: Boolean;
+    FIsRecord: Boolean;
     procedure JSONObjectToDataSet(const pJSON: TJSONObject; const pDataSet: TDataSet);
     procedure JSONArrayToDataSet(const pJSON: TJSONArray; const pDataSet: TDataSet);
   public
@@ -104,6 +117,7 @@ type
     function Source(const pJSON: TJSONArray; const pOwnsJSON: Boolean): IJSONConverter; overload;
 
     procedure ToDataSet(const pDataSet: TDataSet);
+    procedure ToRecord(const pDataSet: TDataSet);
   end;
 
   TConverter = class(TInterfacedObject, IConverter)
@@ -263,8 +277,10 @@ var
   function __BooleanToJSON(const AValue: Boolean): TJSONValue;
   begin
     if AValue
-    then Result := TJSONTrue.Create
-    else Result := TJSONFalse.Create;
+    then
+      Result := TJSONTrue.Create
+    else
+      Result := TJSONFalse.Create;
   end;
 
 begin
@@ -281,7 +297,7 @@ begin
             vTypeBooleanField := GetBooleanFieldType(TBooleanField(pDataSet.Fields[vI]));
             case vTypeBooleanField of
               bfUnknown,
-              bfBoolean: Result.AddPair(vKey, __BooleanToJSON(pDataSet.Fields[vI].AsBoolean));
+                bfBoolean: Result.AddPair(vKey, __BooleanToJSON(pDataSet.Fields[vI].AsBoolean));
               bfInteger: Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[vI].AsInteger));
             end;
           end;
@@ -394,6 +410,7 @@ begin
   FSrcJSONObject := nil;
   FSrcJSONArray := nil;
   FOwnsJSON := False;
+  FIsRecord := False;
 end;
 
 destructor TJSONConverter.Destroy;
@@ -433,7 +450,10 @@ begin
   if (pJSON <> nil) and (pDataSet <> nil) then
   begin
     vJv := nil;
-    pDataSet.Append;
+    if FIsRecord then
+      pDataSet.Edit
+    else
+      pDataSet.Append;
     for vField in pDataSet.Fields do
     begin
       if Assigned(pJSON.Get(vField.FieldName)) then
@@ -544,6 +564,12 @@ begin
     raise EDataSetJSONConverterException.Create('JSON Value Uninformed!');
 end;
 
+procedure TJSONConverter.ToRecord(const pDataSet: TDataSet);
+begin
+  FIsRecord := True;
+  ToDataSet(pDataSet);
+end;
+
 { TConverter }
 
 function TConverter.DataSet: IDataSetConverter;
@@ -584,6 +610,33 @@ end;
 function TConverter.JSON(const pJSON: TJSONArray): IJSONConverter;
 begin
   Result := JSON().Source(pJSON);
+end;
+
+{ TDataSetConverterHelper }
+
+function TDataSetConverterHelper.AsJSONArray: TJSONArray;
+begin
+  Result := Converter.DataSet(Self).AsJSONArray;
+end;
+
+function TDataSetConverterHelper.AsJSONObject: TJSONObject;
+begin
+  Result := Converter.DataSet(Self).AsJSONObject;
+end;
+
+procedure TDataSetConverterHelper.FromJSONArray(const pJSON: TJSONArray);
+begin
+  Converter.JSON(pJSON).ToDataSet(Self);
+end;
+
+procedure TDataSetConverterHelper.FromJSONObject(const pJSON: TJSONObject);
+begin
+  Converter.JSON(pJSON).ToDataSet(Self);
+end;
+
+procedure TDataSetConverterHelper.RecordFromJSONObject(const pJSON: TJSONObject);
+begin
+  Converter.JSON(pJSON).ToRecord(Self);
 end;
 
 end.
