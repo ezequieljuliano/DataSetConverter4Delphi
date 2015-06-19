@@ -57,6 +57,9 @@ type
     function AsJSONObject(): TJSONObject;
     function AsJSONArray(): TJSONArray;
 
+    function AsJSONObjectString(): string;
+    function AsJSONArrayString(): string;
+
     procedure FromJSONObject(const pJSON: TJSONObject);
     procedure FromJSONArray(const pJSON: TJSONArray);
 
@@ -619,9 +622,33 @@ begin
   Result := Converter.DataSet(Self).AsJSONArray;
 end;
 
+function TDataSetConverterHelper.AsJSONArrayString: string;
+var
+  vJSONArray: TJSONArray;
+begin
+  vJSONArray := Self.AsJSONArray;
+  try
+    Result := vJSONArray.ToString;
+  finally
+    FreeAndNil(vJSONArray);
+  end;
+end;
+
 function TDataSetConverterHelper.AsJSONObject: TJSONObject;
 begin
   Result := Converter.DataSet(Self).AsJSONObject;
+end;
+
+function TDataSetConverterHelper.AsJSONObjectString: string;
+var
+  vJSONObject: TJSONObject;
+begin
+  vJSONObject := Self.AsJSONObject;
+  try
+    Result := vJSONObject.ToString;
+  finally
+    FreeAndNil(vJSONObject);
+  end;
 end;
 
 procedure TDataSetConverterHelper.FromJSONArray(const pJSON: TJSONArray);
