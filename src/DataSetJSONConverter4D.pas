@@ -107,7 +107,7 @@ type
     FSrcJSONArray: TJSONArray;
     FOwnsJSON: Boolean;
     FIsRecord: Boolean;
-    procedure JSONObjectToDataSet(const pJSON: TJSONObject; const pDataSet: TDataSet);
+    procedure JSONObjectToDataSet(const pJSON: TJSONObject; const pDataSet: TDataSet; const pRecNo: Integer);
     procedure JSONArrayToDataSet(const pJSON: TJSONArray; const pDataSet: TDataSet);
   public
     constructor Create();
@@ -431,18 +431,24 @@ end;
 procedure TJSONConverter.JSONArrayToDataSet(const pJSON: TJSONArray; const pDataSet: TDataSet);
 var
   vJv: TJSONValue;
+  vRecNo: Integer;
 begin
   if (pJSON <> nil) and (pDataSet <> nil) then
   begin
+    vRecNo := 0;
     for vJv in pJSON do
+    begin
+      Inc(vRecNo);
       if (vJv is TJSONArray) then
         JSONArrayToDataSet(vJv as TJSONArray, pDataSet)
       else
-        JSONObjectToDataSet(vJv as TJSONObject, pDataSet)
+        JSONObjectToDataSet(vJv as TJSONObject, pDataSet, vRecNo)
+    end;
   end;
 end;
 
-procedure TJSONConverter.JSONObjectToDataSet(const pJSON: TJSONObject; const pDataSet: TDataSet);
+procedure TJSONConverter.JSONObjectToDataSet(const pJSON: TJSONObject; const pDataSet: TDataSet;
+  const pRecNo: Integer);
 var
   vField: TField;
   vJv: TJSONValue;
@@ -453,6 +459,8 @@ begin
   if (pJSON <> nil) and (pDataSet <> nil) then
   begin
     vJv := nil;
+    if (pRecNo > 0) then
+      pDataSet.RecNo := pRecNo;
     if FIsRecord then
       pDataSet.Edit
     else
@@ -520,7 +528,7 @@ begin
             vNestedDataSet := TDataSetField(vField).NestedDataSet;
             case vTypeDataSet of
               dsfJSONObject:
-                JSONObjectToDataSet(vJv as TJSONObject, vNestedDataSet);
+                JSONObjectToDataSet(vJv as TJSONObject, vNestedDataSet, pRecNo);
               dsfJSONArray:
                 JSONArrayToDataSet(vJv as TJSONArray, vNestedDataSet);
             end;
@@ -560,7 +568,7 @@ end;
 procedure TJSONConverter.ToDataSet(const pDataSet: TDataSet);
 begin
   if (FSrcJSONObject <> nil) then
-    JSONObjectToDataSet(FSrcJSONObject, pDataSet)
+    JSONObjectToDataSet(FSrcJSONObject, pDataSet, 0)
   else if (FSrcJSONArray <> nil) then
     JSONArrayToDataSet(FSrcJSONArray, pDataSet)
   else
