@@ -4,11 +4,13 @@ interface
 
 uses
   System.SysUtils,
+  System.Classes,
   System.JSON,
   System.DateUtils,
   Data.DB,
   Data.SqlTimSt,
-  Data.FmtBcd;
+  Data.FmtBcd,
+  Data.DBXJSONCommon;
 
 type
 
@@ -68,11 +70,11 @@ type
 
 function Converter(): IConverter;
 
-function DateTimeToISOTimestamp(const pDateTime: TDateTime): string;
+function DateTimeToISOTimeStamp(const pDateTime: TDateTime): string;
 function DateToISODate(const pDate: TDateTime): string;
 function TimeToISOTime(const pTime: TTime): string;
 
-function ISOTimestampToDateTime(const pDateTime: string): TDateTime;
+function ISOTimeStampToDateTime(const pDateTime: string): TDateTime;
 function ISODateToDate(const pDate: string): TDate;
 function ISOTimeToTime(const pTime: string): TTime;
 
@@ -170,7 +172,7 @@ begin
       Exit(TDataSetFieldType(vIndice));
 end;
 
-function DateTimeToISOTimestamp(const pDateTime: TDateTime): string;
+function DateTimeToISOTimeStamp(const pDateTime: TDateTime): string;
 var
   vFS: TFormatSettings;
 begin
@@ -191,7 +193,7 @@ begin
   Result := FormatDateTime('hh:nn:ss', pTime, vFS);
 end;
 
-function ISOTimestampToDateTime(const pDateTime: string): TDateTime;
+function ISOTimeStampToDateTime(const pDateTime: string): TDateTime;
 begin
   Result := EncodeDateTime(StrToInt(Copy(pDateTime, 1, 4)), StrToInt(Copy(pDateTime, 6, 2)), StrToInt(Copy(pDateTime, 9, 2)),
     StrToInt(Copy(pDateTime, 12, 2)), StrToInt(Copy(pDateTime, 15, 2)), StrToInt(Copy(pDateTime, 18, 2)), 0);
@@ -270,17 +272,17 @@ end;
 
 function TDataSetConverter.DataSetToJSONObject(const pDataSet: TDataSet): TJSONObject;
 var
-  vI: Integer;
+  I: Integer;
   vKey: string;
-  vTs: TSQLTimeStamp;
+  vTimeStamp: TSQLTimeStamp;
   vNestedDataSet: TDataSet;
   vTypeDataSetField: TDataSetFieldType;
   vTypeBooleanField: TBooleanFieldType;
+  vMS: TMemoryStream;
 
-  function __BooleanToJSON(const AValue: Boolean): TJSONValue;
+  function __BooleanToJSON(const pValue: Boolean): TJSONValue;
   begin
-    if AValue
-    then
+    if pValue then
       Result := TJSONTrue.Create
     else
       Result := TJSONFalse.Create;
@@ -291,86 +293,102 @@ begin
   if (pDataSet <> nil) and (not pDataSet.IsEmpty) then
   begin
     Result := TJSONObject.Create;
-    for vI := 0 to Pred(pDataSet.FieldCount) do
+    for I := 0 to Pred(pDataSet.FieldCount) do
     begin
-      vKey := pDataSet.Fields[vI].FieldName;
-      case pDataSet.Fields[vI].DataType of
+      vKey := pDataSet.Fields[I].FieldName;
+      case pDataSet.Fields[I].DataType of
         TFieldType.ftBoolean:
           begin
-            vTypeBooleanField := GetBooleanFieldType(TBooleanField(pDataSet.Fields[vI]));
+            vTypeBooleanField := GetBooleanFieldType(TBooleanField(pDataSet.Fields[I]));
             case vTypeBooleanField of
               bfUnknown,
-                bfBoolean: Result.AddPair(vKey, __BooleanToJSON(pDataSet.Fields[vI].AsBoolean));
-              bfInteger: Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[vI].AsInteger));
+                bfBoolean: Result.AddPair(vKey, __BooleanToJSON(pDataSet.Fields[I].AsBoolean));
+              bfInteger: Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[I].AsInteger));
             end;
           end;
         TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
-          Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[vI].AsInteger));
+          Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[I].AsInteger));
         TFieldType.ftLargeint:
           begin
-            Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[vI].AsLargeInt));
+            Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[I].AsLargeInt));
           end;
         TFieldType.ftSingle, TFieldType.ftFloat:
-          Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[vI].AsFloat));
+          Result.AddPair(vKey, TJSONNumber.Create(pDataSet.Fields[I].AsFloat));
         ftString, ftWideString, ftMemo, ftWideMemo:
-          Result.AddPair(vKey, pDataSet.Fields[vI].AsWideString);
+          Result.AddPair(vKey, pDataSet.Fields[I].AsWideString);
         TFieldType.ftDate:
           begin
-            if not pDataSet.Fields[vI].IsNull then
+            if not pDataSet.Fields[I].IsNull then
             begin
-              Result.AddPair(vKey, DateToISODate(pDataSet.Fields[vI].AsDateTime));
+              Result.AddPair(vKey, DateToISODate(pDataSet.Fields[I].AsDateTime));
             end
             else
               Result.AddPair(vKey, TJSONNull.Create);
           end;
         TFieldType.ftDateTime:
           begin
-            if not pDataSet.Fields[vI].IsNull then
+            if not pDataSet.Fields[I].IsNull then
             begin
-              Result.AddPair(vKey, DateTimeToISOTimestamp(pDataSet.Fields[vI].AsDateTime));
+              Result.AddPair(vKey, DateTimeToISOTimeStamp(pDataSet.Fields[I].AsDateTime));
             end
             else
               Result.AddPair(vKey, TJSONNull.Create);
           end;
         TFieldType.ftTimeStamp, TFieldType.ftTime:
           begin
-            if not pDataSet.Fields[vI].IsNull then
+            if not pDataSet.Fields[I].IsNull then
             begin
-              vTs := pDataSet.Fields[vI].AsSQLTimeStamp;
-              Result.AddPair(vKey, SQLTimeStampToStr('hh:nn:ss', vTs));
+              vTimeStamp := pDataSet.Fields[I].AsSQLTimeStamp;
+              Result.AddPair(vKey, SQLTimeStampToStr('hh:nn:ss', vTimeStamp));
             end
             else
               Result.AddPair(vKey, TJSONNull.Create);
           end;
         TFieldType.ftCurrency:
           begin
-            if not pDataSet.Fields[vI].IsNull then
+            if not pDataSet.Fields[I].IsNull then
             begin
-              Result.AddPair(vKey, FormatCurr('0.00##', pDataSet.Fields[vI].AsCurrency));
+              Result.AddPair(vKey, FormatCurr('0.00##', pDataSet.Fields[I].AsCurrency));
             end
             else
               Result.AddPair(vKey, TJSONNull.Create);
           end;
         TFieldType.ftFMTBcd:
           begin
-            if not pDataSet.Fields[vI].IsNull then
+            if not pDataSet.Fields[I].IsNull then
             begin
-              Result.AddPair(vKey, TJSONNumber.Create(BcdToDouble(pDataSet.Fields[vI].AsBcd)));
+              Result.AddPair(vKey, TJSONNumber.Create(BcdToDouble(pDataSet.Fields[I].AsBcd)));
             end
             else
               Result.AddPair(vKey, TJSONNull.Create);
           end;
         TFieldType.ftDataSet:
           begin
-            vTypeDataSetField := GetDataSetFieldType(TDataSetField(pDataSet.Fields[vI]));
-            vNestedDataSet := TDataSetField(pDataSet.Fields[vI]).NestedDataSet;
+            vTypeDataSetField := GetDataSetFieldType(TDataSetField(pDataSet.Fields[I]));
+            vNestedDataSet := TDataSetField(pDataSet.Fields[I]).NestedDataSet;
             case vTypeDataSetField of
               dsfJSONObject:
                 Result.AddPair(vKey, DataSetToJSONObject(vNestedDataSet));
               dsfJSONArray:
                 Result.AddPair(vKey, DataSetToJSONArray(vNestedDataSet));
             end;
-          end
+          end;
+        TFieldType.ftGraphic, TFieldType.ftBlob, TFieldType.ftStream:
+          begin
+            if not pDataSet.Fields[I].IsNull then
+            begin
+              vMS := TMemoryStream.Create;
+              try
+                TBlobField(pDataSet.Fields[I]).SaveToStream(vMS);
+                vMS.Position := 0;
+                Result.AddPair(vKey, TDBXJSONTools.StreamToJSON(vMS, 0, vMS.Size));
+              finally
+                FreeAndNil(vMS);
+              end;
+            end
+            else
+              Result.AddPair(vKey, TJSONArray.Create);
+          end;
       else
         raise EDataSetJSONConverterException.CreateFmt('Cannot find type for field "%s"', [vKey]);
       end;
@@ -454,7 +472,8 @@ var
   vJv: TJSONValue;
   vTypeDataSet: TDataSetFieldType;
   vNestedDataSet: TDataSet;
-  b: Boolean;
+  vBoolean: Boolean;
+  vST: TStream;
 begin
   if (pJSON <> nil) and (pDataSet <> nil) then
   begin
@@ -474,8 +493,8 @@ begin
       case vField.DataType of
         TFieldType.ftBoolean:
           begin
-            if vJv.TryGetValue<Boolean>(b) then
-              vField.AsBoolean := b;
+            if vJv.TryGetValue<Boolean>(vBoolean) then
+              vField.AsBoolean := vBoolean;
           end;
         TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
           begin
@@ -513,7 +532,7 @@ begin
             if vJv is TJSONNull then
               vField.Clear
             else
-              vField.AsDateTime := ISOTimestampToDateTime(vJv.Value);
+              vField.AsDateTime := ISOTimeStampToDateTime(vJv.Value);
           end;
         TFieldType.ftTimeStamp, TFieldType.ftTime:
           begin
@@ -531,6 +550,21 @@ begin
                 JSONObjectToDataSet(vJv as TJSONObject, vNestedDataSet, pRecNo);
               dsfJSONArray:
                 JSONArrayToDataSet(vJv as TJSONArray, vNestedDataSet);
+            end;
+          end;
+        TFieldType.ftGraphic, TFieldType.ftBlob, TFieldType.ftStream:
+          begin
+            if vJv is TJSONNull then
+              vField.Clear
+            else
+            begin
+              vST := TDBXJSONTools.JSONToStream(vJv as TJSONArray);
+              try
+                vST.Position := 0;
+                TBlobField(vField).LoadFromStream(vST);
+              finally
+                FreeAndNil(vST);
+              end;
             end;
           end
       else
