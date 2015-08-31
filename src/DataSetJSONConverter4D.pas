@@ -456,11 +456,11 @@ begin
     vRecNo := 0;
     for vJv in pJSON do
     begin
-      Inc(vRecNo);
       if (vJv is TJSONArray) then
         JSONArrayToDataSet(vJv as TJSONArray, pDataSet)
       else
-        JSONObjectToDataSet(vJv as TJSONObject, pDataSet, vRecNo)
+        JSONObjectToDataSet(vJv as TJSONObject, pDataSet, vRecNo);
+      Inc(vRecNo);
     end;
   end;
 end;
@@ -478,7 +478,7 @@ begin
   if (pJSON <> nil) and (pDataSet <> nil) then
   begin
     vJv := nil;
-    if (pRecNo > 0) then
+    if (pRecNo > 0) and (pDataSet.RecordCount > 1) then
       pDataSet.RecNo := pRecNo;
     if FIsRecord then
       pDataSet.Edit
