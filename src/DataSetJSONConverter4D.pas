@@ -456,11 +456,11 @@ begin
     vRecNo := 0;
     for vJv in pJSON do
     begin
+      Inc(vRecNo);
       if (vJv is TJSONArray) then
         JSONArrayToDataSet(vJv as TJSONArray, pDataSet)
       else
         JSONObjectToDataSet(vJv as TJSONObject, pDataSet, vRecNo);
-      Inc(vRecNo);
     end;
   end;
 end;
