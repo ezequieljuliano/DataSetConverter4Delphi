@@ -456,7 +456,8 @@ begin
     vRecNo := 0;
     for vJv in pJSON do
     begin
-      Inc(vRecNo);
+      if not pDataSet.IsEmpty then      
+        Inc(vRecNo);
       if (vJv is TJSONArray) then
         JSONArrayToDataSet(vJv as TJSONArray, pDataSet)
       else
