@@ -1,4 +1,4 @@
-program DataSetJSONConverter4DTests;
+program DataSetConverter4DTests;
 {
 
   Delphi DUnit Test Project
@@ -16,8 +16,11 @@ program DataSetJSONConverter4DTests;
 
 uses
   DUnitTestRunner,
-  DataSetJSONConverter4D in '..\src\DataSetJSONConverter4D.pas',
-  DataSetJSONConverter.UnitTest in 'DataSetJSONConverter.UnitTest.pas';
+  DataSetConverter4D in '..\src\DataSetConverter4D.pas',
+  DataSetConverter4D.UnitTest in 'DataSetConverter4D.UnitTest.pas',
+  DataSetConverter4D.Impl in '..\src\DataSetConverter4D.Impl.pas',
+  DataSetConverter4D.Util in '..\src\DataSetConverter4D.Util.pas',
+  DataSetConverter4D.Helper in '..\src\DataSetConverter4D.Helper.pas';
 
 {$R *.RES}
 
