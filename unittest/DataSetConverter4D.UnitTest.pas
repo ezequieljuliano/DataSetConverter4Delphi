@@ -34,6 +34,8 @@ type
     procedure TestConvertJSONToDataSetOwnsObject;
 
     procedure TestConvertDataSetToJSONBasicHelper;
+
+    procedure TestJSONConverter;
   end;
 
 implementation
@@ -253,6 +255,69 @@ begin
 
   TConverter.New.JSON.Source(ja, True).ToDataSet(fCdsCustomers);
   CheckFalse(fCdsCustomers.IsEmpty);
+end;
+
+procedure TTestsDataSetConverter.TestJSONConverter;
+const
+  JSON_1 =
+    '[{"Id":1,"Description":"Sales 1","Date":"2014-01-22","Time":"14:03:03",' +
+    '"Customers":{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"},' +
+    '"Products":[{"Id":1,"Description":"Product 1","Value":100},' +
+    '{"Id":2,"Description":"Product 2","Value":200}]},' +
+    '{"Id":2,"Description":"Sales 2","Date":"2014-01-22","Time":"14:03:03",' +
+    '"Customers":{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"},' +
+    '"Products":[{"Id":1,"Description":"Product 1","Value":100}]}]';
+
+  JSON_2 = '{"Id":3,"Description":"Sales 3","Date":"2014-01-22","Time":"14:03:03",' +
+    '"Customers":{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"},' +
+    '"Products":[{"Id":100,"Description":"Product 100","Value":100},' +
+    '{"Id":200,"Description":"Product 200","Value":200}]}';
+var
+  converter: IJSONConverter;
+  ja: TJSONArray;
+  jo: TJSONObject;
+begin
+  converter := TJSONConverter.Create;
+  ja := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(JSON_1), 0) as TJSONArray;
+  try
+    converter.Source(ja).ToDataSet(fCdsSales);
+
+    fCdsSales.Last;
+
+    CheckTrue(fCdsSales.RecordCount = 2);
+    CheckTrue(fCdsCustomers.RecordCount = 1);
+    CheckTrue(fCdsProducts.RecordCount = 1);
+
+    jo := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(JSON_2), 0) as TJSONObject;
+    try
+      converter.Source(jo).ToRecord(fCdsSales);
+      CheckTrue(fCdsSales.RecordCount = 2);
+      CheckTrue(fCdsCustomers.RecordCount = 1);
+      CheckTrue(fCdsProducts.RecordCount = 2);
+      CheckEquals('3', fCdsSales.FieldByName('Id').AsString);
+      CheckEquals('Sales 3', fCdsSales.FieldByName('Description').AsString);
+
+      fCdsProducts.First;
+      while not fCdsProducts.Eof do
+      begin
+        if (fCdsProducts.RecNo = 1) then
+        begin
+          CheckEquals('100', fCdsProducts.FieldByName('Id').AsString);
+          CheckEquals('Product 100', fCdsProducts.FieldByName('Description').AsString);
+        end
+        else if (fCdsProducts.RecNo = 2) then
+        begin
+          CheckEquals('200', fCdsProducts.FieldByName('Id').AsString);
+          CheckEquals('Product 200', fCdsProducts.FieldByName('Description').AsString);
+        end;
+        fCdsProducts.Next;
+      end;
+    finally
+      jo.Free;
+    end;
+  finally
+    ja.Free;
+  end;
 end;
 
 initialization

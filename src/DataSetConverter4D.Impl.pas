@@ -47,8 +47,8 @@ type
     fIsRecord: Boolean;
     procedure ClearJSONs;
   protected
-    procedure JSONObjectToDataSet(json: TJSONObject; dataSet: TDataSet; const recNo: Integer);
-    procedure JSONArrayToDataSet(json: TJSONArray; dataSet: TDataSet);
+    procedure JSONObjectToDataSet(json: TJSONObject; dataSet: TDataSet; const recNo: Integer; const isRecord: Boolean);
+    procedure JSONArrayToDataSet(json: TJSONArray; dataSet: TDataSet; const isRecord: Boolean);
 
     function Source(json: TJSONObject): IJSONConverter; overload;
     function Source(json: TJSONObject; const owns: Boolean): IJSONConverter; overload;
@@ -312,7 +312,7 @@ begin
   fJSONArray := nil;
 end;
 
-procedure TJSONConverter.JSONArrayToDataSet(json: TJSONArray; dataSet: TDataSet);
+procedure TJSONConverter.JSONArrayToDataSet(json: TJSONArray; dataSet: TDataSet; const isRecord: Boolean);
 var
   jv: TJSONValue;
   recNo: Integer;
@@ -325,14 +325,14 @@ begin
       if not dataSet.IsEmpty then
         Inc(recNo);
       if (jv is TJSONArray) then
-        JSONArrayToDataSet(jv as TJSONArray, dataSet)
+        JSONArrayToDataSet(jv as TJSONArray, dataSet, isRecord)
       else
-        JSONObjectToDataSet(jv as TJSONObject, dataSet, recNo);
+        JSONObjectToDataSet(jv as TJSONObject, dataSet, recNo, isRecord);
     end;
   end;
 end;
 
-procedure TJSONConverter.JSONObjectToDataSet(json: TJSONObject; dataSet: TDataSet; const recNo: Integer);
+procedure TJSONConverter.JSONObjectToDataSet(json: TJSONObject; dataSet: TDataSet; const recNo: Integer; const isRecord: Boolean);
 var
   field: TField;
   jv: TJSONValue;
@@ -344,12 +344,15 @@ begin
   if Assigned(json) and Assigned(dataSet) then
   begin
     jv := nil;
+
     if (recNo > 0) and (dataSet.RecordCount > 1) then
       dataSet.RecNo := recNo;
-    if FIsRecord then
+
+    if isRecord then
       dataSet.Edit
     else
       dataSet.Append;
+
     for field in dataSet.Fields do
     begin
       if Assigned(json.Get(field.FieldName)) then
@@ -413,9 +416,14 @@ begin
             nestedDataSet := TDataSetField(field).NestedDataSet;
             case dft of
               dfJSONObject:
-                JSONObjectToDataSet(jv as TJSONObject, nestedDataSet, recNo);
+                JSONObjectToDataSet(jv as TJSONObject, nestedDataSet, 0, True);
               dfJSONArray:
-                JSONArrayToDataSet(jv as TJSONArray, nestedDataSet);
+                begin
+                  nestedDataSet.First;
+                  while not nestedDataSet.Eof do
+                    nestedDataSet.Delete;
+                  JSONArrayToDataSet(jv as TJSONArray, nestedDataSet, False);
+                end;
             end;
           end;
         TFieldType.ftGraphic, TFieldType.ftBlob, TFieldType.ftStream:
@@ -475,9 +483,9 @@ end;
 procedure TJSONConverter.ToDataSet(dataSet: TDataSet);
 begin
   if Assigned(fJSONObject) then
-    JSONObjectToDataSet(fJSONObject, dataSet, 0)
+    JSONObjectToDataSet(fJSONObject, dataSet, 0, fIsRecord)
   else if Assigned(fJSONArray) then
-    JSONArrayToDataSet(fJSONArray, dataSet)
+    JSONArrayToDataSet(fJSONArray, dataSet, fIsRecord)
   else
     raise EDataSetConverterException.Create('JSON Value Uninformed.');
 end;
