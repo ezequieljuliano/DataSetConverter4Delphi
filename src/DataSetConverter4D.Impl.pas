@@ -200,7 +200,7 @@ begin
             else
               Result.AddPair(key, TJSONNull.Create);
           end;
-        TFieldType.ftFMTBcd:
+        TFieldType.ftFMTBcd, TFieldType.ftBCD:
           begin
             if not dataSet.Fields[i].IsNull then
             begin
@@ -381,7 +381,7 @@ begin
           begin
             field.AsSingle := (jv as TJSONNumber).AsDouble;
           end;
-        TFieldType.ftFloat, TFieldType.ftFMTBcd:
+        TFieldType.ftFloat, TFieldType.ftFMTBcd, TFieldType.ftBCD:
           begin
             field.AsFloat := (jv as TJSONNumber).AsDouble;
           end;

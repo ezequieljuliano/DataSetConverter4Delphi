@@ -36,6 +36,8 @@ type
     procedure TestConvertDataSetToJSONBasicHelper;
 
     procedure TestJSONConverter;
+
+    procedure Test_Inssue_2;
   end;
 
 implementation
@@ -317,6 +319,44 @@ begin
     end;
   finally
     ja.Free;
+  end;
+end;
+
+procedure TTestsDataSetConverter.Test_Inssue_2;
+// https://github.com/ezequieljuliano/DataSetConverter4Delphi/issues/2
+const
+  JSON = '{"Value":50}';
+var
+  cds: TClientDataSet;
+  jo: TJSONObject;
+begin
+  cds := TClientDataSet.Create(nil);
+  try
+    NewDataSetField(cds, ftBCD, 'Value');
+
+    cds.CreateDataSet;
+
+    cds.Append;
+    cds.FieldByName('Value').AsFloat := 50;
+    cds.Post;
+
+    jo := TConverter.New.DataSet(cds).AsJSONObject;
+    try
+      CheckEqualsString(JSON, jo.ToString);
+    finally
+      jo.Free;
+    end;
+
+    jo := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(JSON), 0) as TJSONObject;
+    try
+      TConverter.New.JSON(jo).ToDataSet(cds);
+      CheckFalse(cds.IsEmpty);
+      CheckTrue(cds.FieldByName('Value').AsFloat = 50);
+    finally
+      jo.Free;
+    end;
+  finally
+    cds.Free;
   end;
 end;
 
