@@ -162,12 +162,12 @@ begin
         TFieldType.ftSingle, TFieldType.ftFloat:
           Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsFloat));
         ftString, ftWideString, ftMemo, ftWideMemo:
-          Result.AddPair(key, dataSet.Fields[i].AsWideString);
+          Result.AddPair(key, TJSONString.Create(dataSet.Fields[i].AsWideString));
         TFieldType.ftDate:
           begin
             if not dataSet.Fields[i].IsNull then
             begin
-              Result.AddPair(key, DateToISODate(dataSet.Fields[i].AsDateTime));
+              Result.AddPair(key, TJSONString.Create(DateToISODate(dataSet.Fields[i].AsDateTime)));
             end
             else
               Result.AddPair(key, TJSONNull.Create);
@@ -176,7 +176,7 @@ begin
           begin
             if not dataSet.Fields[i].IsNull then
             begin
-              Result.AddPair(key, DateTimeToISOTimeStamp(dataSet.Fields[i].AsDateTime));
+              Result.AddPair(key, TJSONString.Create(DateTimeToISOTimeStamp(dataSet.Fields[i].AsDateTime)));
             end
             else
               Result.AddPair(key, TJSONNull.Create);
@@ -186,7 +186,7 @@ begin
             if not dataSet.Fields[i].IsNull then
             begin
               timeStamp := dataSet.Fields[i].AsSQLTimeStamp;
-              Result.AddPair(key, SQLTimeStampToStr('hh:nn:ss', timeStamp));
+              Result.AddPair(key, TJSONString.Create(SQLTimeStampToStr('hh:nn:ss', timeStamp)));
             end
             else
               Result.AddPair(key, TJSONNull.Create);
@@ -195,7 +195,7 @@ begin
           begin
             if not dataSet.Fields[i].IsNull then
             begin
-              Result.AddPair(key, FormatCurr('0.00##', dataSet.Fields[i].AsCurrency));
+              Result.AddPair(key, TJSONString.Create(FormatCurr('0.00##', dataSet.Fields[i].AsCurrency)));
             end
             else
               Result.AddPair(key, TJSONNull.Create);
@@ -343,8 +343,6 @@ var
 begin
   if Assigned(json) and Assigned(dataSet) then
   begin
-    jv := nil;
-
     if (recNo > 0) and (dataSet.RecordCount > 1) then
       dataSet.RecNo := recNo;
 
@@ -362,32 +360,52 @@ begin
       case field.DataType of
         TFieldType.ftBoolean:
           begin
-            if jv.TryGetValue<Boolean>(booleanValue) then
+            if jv is TJSONNull then
+              field.Clear
+            else if jv.TryGetValue<Boolean>(booleanValue) then
               field.AsBoolean := booleanValue;
           end;
         TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
           begin
-            field.AsInteger := StrToIntDef(jv.Value, 0);
+            if jv is TJSONNull then
+              field.Clear
+            else
+              field.AsInteger := StrToIntDef(jv.Value, 0);
           end;
         TFieldType.ftLargeint:
           begin
-            field.AsLargeInt := StrToInt64Def(jv.Value, 0);
+            if jv is TJSONNull then
+              field.Clear
+            else
+              field.AsLargeInt := StrToInt64Def(jv.Value, 0);
           end;
         TFieldType.ftCurrency:
           begin
-            field.AsCurrency := (jv as TJSONNumber).AsDouble;
+            if jv is TJSONNull then
+              field.Clear
+            else
+              field.AsCurrency := (jv as TJSONNumber).AsDouble;
           end;
         TFieldType.ftSingle:
           begin
-            field.AsSingle := (jv as TJSONNumber).AsDouble;
+            if jv is TJSONNull then
+              field.Clear
+            else
+              field.AsSingle := (jv as TJSONNumber).AsDouble;
           end;
         TFieldType.ftFloat, TFieldType.ftFMTBcd, TFieldType.ftBCD:
           begin
-            field.AsFloat := (jv as TJSONNumber).AsDouble;
+            if jv is TJSONNull then
+              field.Clear
+            else
+              field.AsFloat := (jv as TJSONNumber).AsDouble;
           end;
         ftString, ftWideString, ftMemo, ftWideMemo:
           begin
-            field.AsString := jv.Value;
+            if jv is TJSONNull then
+              field.Clear
+            else
+              field.AsString := jv.Value;
           end;
         TFieldType.ftDate:
           begin
