@@ -159,6 +159,10 @@ begin
           begin
             Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
           end;
+        TFieldType.ftAutoInc:
+          begin
+            Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
+          end;
         TFieldType.ftSingle, TFieldType.ftFloat:
           Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsFloat));
         ftString, ftWideString, ftMemo, ftWideMemo:
@@ -458,6 +462,9 @@ begin
                 st.Free;
               end;
             end;
+          end;
+        TFieldType.ftAutoInc:
+          begin
           end
       else
         raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [field.FieldName]);
