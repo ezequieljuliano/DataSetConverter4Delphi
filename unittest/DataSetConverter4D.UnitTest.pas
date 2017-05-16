@@ -17,7 +17,7 @@ uses
 type
 
   TTestsDataSetConverter = class(TTestCase)
-  strict private
+  private
     fCdsCustomers: TClientDataSet;
     fCdsSales: TClientDataSet;
     fCdsProducts: TClientDataSet;
@@ -27,17 +27,13 @@ type
   published
     procedure TestConvertDataSetToJSONBasic;
     procedure TestConvertDataSetToJSONComplex;
-
     procedure TestConvertJSONToDataSetBasic;
     procedure TestConvertJSONToDataSetComplex;
-
     procedure TestConvertJSONToDataSetOwnsObject;
-
     procedure TestConvertDataSetToJSONBasicHelper;
-
     procedure TestJSONConverter;
-
     procedure Test_Inssue_2;
+    procedure TestBlobAndText;
   end;
 
 implementation
@@ -76,6 +72,43 @@ begin
   fCdsProducts.Free;
   fCdsSales.Free;
   fCdsCustomers.Free;
+end;
+
+procedure TTestsDataSetConverter.TestBlobAndText;
+const
+  JSON = '{"Value":"RXplcXVpZWwgSnVsaWFubw=="}';
+var
+  cds: TClientDataSet;
+  jo: TJSONObject;
+begin
+  cds := TClientDataSet.Create(nil);
+  try
+    NewDataSetField(cds, ftBlob, 'Value');
+
+    cds.CreateDataSet;
+
+    cds.Append;
+    cds.FieldByName('Value').AsString := 'Ezequiel Juliano';
+    cds.Post;
+
+    jo := TConverter.New.DataSet(cds).AsJSONObject;
+    try
+      CheckEqualsString(JSON, jo.ToString);
+    finally
+      jo.Free;
+    end;
+
+    jo := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(JSON), 0) as TJSONObject;
+    try
+      TConverter.New.JSON(jo).ToDataSet(cds);
+      CheckFalse(cds.IsEmpty);
+      CheckTrue(cds.FieldByName('Value').AsString = 'Ezequiel Juliano');
+    finally
+      jo.Free;
+    end;
+  finally
+    cds.Free;
+  end;
 end;
 
 procedure TTestsDataSetConverter.TestConvertDataSetToJSONBasic;

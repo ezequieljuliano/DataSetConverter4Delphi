@@ -7,10 +7,10 @@ uses
   System.Classes,
   System.JSON,
   System.DateUtils,
+  System.NetEncoding,
   Data.SqlTimSt,
   Data.FmtBcd,
   Data.DB,
-  Data.DBXJSONCommon,
   DataSetConverter4D,
   DataSetConverter4D.Util;
 
@@ -135,6 +135,7 @@ var
   dft: TDataSetFieldType;
   bft: TBooleanFieldType;
   ms: TMemoryStream;
+  ss: TStringStream;
 begin
   Result := nil;
   if Assigned(dataSet) and (not dataSet.IsEmpty) then
@@ -148,21 +149,14 @@ begin
           begin
             bft := BooleanFieldToType(TBooleanField(dataSet.Fields[i]));
             case bft of
-              bfUnknown,
-                bfBoolean: Result.AddPair(key, BooleanToJSON(dataSet.Fields[i].AsBoolean));
+              bfUnknown, bfBoolean: Result.AddPair(key, BooleanToJSON(dataSet.Fields[i].AsBoolean));
               bfInteger: Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsInteger));
             end;
           end;
         TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
           Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsInteger));
-        TFieldType.ftLargeint:
-          begin
-            Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
-          end;
-        TFieldType.ftAutoInc:
-          begin
-            Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
-          end;
+        TFieldType.ftLargeint, TFieldType.ftAutoInc:
+          Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
         TFieldType.ftSingle, TFieldType.ftFloat:
           Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsFloat));
         ftString, ftWideString, ftMemo, ftWideMemo:
@@ -170,18 +164,14 @@ begin
         TFieldType.ftDate:
           begin
             if not dataSet.Fields[i].IsNull then
-            begin
-              Result.AddPair(key, TJSONString.Create(DateToISODate(dataSet.Fields[i].AsDateTime)));
-            end
+              Result.AddPair(key, TJSONString.Create(DateToISODate(dataSet.Fields[i].AsDateTime)))
             else
               Result.AddPair(key, TJSONNull.Create);
           end;
         TFieldType.ftDateTime:
           begin
             if not dataSet.Fields[i].IsNull then
-            begin
-              Result.AddPair(key, TJSONString.Create(DateTimeToISOTimeStamp(dataSet.Fields[i].AsDateTime)));
-            end
+              Result.AddPair(key, TJSONString.Create(DateTimeToISOTimeStamp(dataSet.Fields[i].AsDateTime)))
             else
               Result.AddPair(key, TJSONNull.Create);
           end;
@@ -198,18 +188,14 @@ begin
         TFieldType.ftCurrency:
           begin
             if not dataSet.Fields[i].IsNull then
-            begin
-              Result.AddPair(key, TJSONString.Create(FormatCurr('0.00##', dataSet.Fields[i].AsCurrency)));
-            end
+              Result.AddPair(key, TJSONString.Create(FormatCurr('0.00##', dataSet.Fields[i].AsCurrency)))
             else
               Result.AddPair(key, TJSONNull.Create);
           end;
         TFieldType.ftFMTBcd, TFieldType.ftBCD:
           begin
             if not dataSet.Fields[i].IsNull then
-            begin
-              Result.AddPair(key, TJSONNumber.Create(BcdToDouble(dataSet.Fields[i].AsBcd)));
-            end
+              Result.AddPair(key, TJSONNumber.Create(BcdToDouble(dataSet.Fields[i].AsBcd)))
             else
               Result.AddPair(key, TJSONNull.Create);
           end;
@@ -226,19 +212,20 @@ begin
           end;
         TFieldType.ftGraphic, TFieldType.ftBlob, TFieldType.ftStream:
           begin
-            if not dataSet.Fields[i].IsNull then
-            begin
-              ms := TMemoryStream.Create;
+            ms := TMemoryStream.Create;
+            try
+              TBlobField(dataSet.Fields[I]).SaveToStream(ms);
+              ms.Position := 0;
+              ss := TStringStream.Create;
               try
-                TBlobField(dataSet.Fields[i]).SaveToStream(ms);
-                ms.Position := 0;
-                Result.AddPair(key, TDBXJSONTools.StreamToJSON(ms, 0, ms.Size));
+                TNetEncoding.Base64.Encode(ms, ss);
+                Result.AddPair(key, TJSONString.Create(ss.DataString));
               finally
-                ms.Free;
+                ss.Free;
               end;
-            end
-            else
-              Result.AddPair(key, TJSONArray.Create);
+            finally
+              ms.Free;
+            end;
           end;
       else
         raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [key]);
@@ -343,7 +330,8 @@ var
   dft: TDataSetFieldType;
   nestedDataSet: TDataSet;
   booleanValue: Boolean;
-  st: TStream;
+  ss: TStringStream;
+  sm: TMemoryStream;
 begin
   if Assigned(json) and Assigned(dataSet) then
   begin
@@ -454,18 +442,21 @@ begin
               field.Clear
             else
             begin
-              st := TDBXJSONTools.JSONToStream(jv as TJSONArray);
+              ss := TStringStream.Create((Jv as TJSONString).Value);
               try
-                st.Position := 0;
-                TBlobField(field).LoadFromStream(st);
+                ss.Position := 0;
+                sm := TMemoryStream.Create;
+                try
+                  TNetEncoding.Base64.Decode(ss, sm);
+                  TBlobField(Field).LoadFromStream(sm);
+                finally
+                  sm.Free;
+                end;
               finally
-                st.Free;
+                ss.Free;
               end;
             end;
           end;
-        TFieldType.ftAutoInc:
-          begin
-          end
       else
         raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [field.FieldName]);
       end;
