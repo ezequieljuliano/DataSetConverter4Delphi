@@ -1,5 +1,5 @@
 unit DataSetConverter4D.Impl;
-
+
 interface
 
 uses
@@ -155,7 +155,7 @@ begin
           end;
         TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
           Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsInteger));
-        TFieldType.ftLargeint, TFieldType.ftAutoInc:
+        TFieldType.ftLargeint:
           Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
         TFieldType.ftSingle, TFieldType.ftFloat:
           Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsFloat));
@@ -227,6 +227,9 @@ begin
               ms.Free;
             end;
           end;
+        TFieldType.ftAutoInc:
+          begin
+          end
       else
         raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [key]);
       end;
@@ -349,6 +352,8 @@ begin
         jv := json.Get(field.FieldName).JsonValue
       else
         Continue;
+      if field.ReadOnly then
+        Continue;
       case field.DataType of
         TFieldType.ftBoolean:
           begin
@@ -364,7 +369,7 @@ begin
             else
               field.AsInteger := StrToIntDef(jv.Value, 0);
           end;
-        TFieldType.ftLargeint:
+        TFieldType.ftLargeint, TFieldType.ftAutoInc:
           begin
             if jv is TJSONNull then
               field.Clear
@@ -564,3 +569,4 @@ begin
 end;
 
 end.
+
