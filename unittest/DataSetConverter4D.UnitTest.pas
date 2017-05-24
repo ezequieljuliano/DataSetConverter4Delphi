@@ -33,6 +33,7 @@ type
     procedure TestConvertDataSetToJSONBasicHelper;
     procedure TestJSONConverter;
     procedure Test_Inssue_2;
+    procedure Test_Inssue_7;
     procedure TestBlobAndText;
   end;
 
@@ -385,6 +386,44 @@ begin
       TConverter.New.JSON(jo).ToDataSet(cds);
       CheckFalse(cds.IsEmpty);
       CheckTrue(cds.FieldByName('Value').AsFloat = 50);
+    finally
+      jo.Free;
+    end;
+  finally
+    cds.Free;
+  end;
+end;
+
+procedure TTestsDataSetConverter.Test_Inssue_7;
+// https://github.com/ezequieljuliano/DataSetConverter4Delphi/issues/7
+const
+  JSON = '{"Value":"2014-01-22 14:05:03"}';
+var
+  cds: TClientDataSet;
+  jo: TJSONObject;
+begin
+  cds := TClientDataSet.Create(nil);
+  try
+    NewDataSetField(cds, ftTimeStamp, 'Value');
+
+    cds.CreateDataSet;
+
+    cds.Append;
+    cds.FieldByName('Value').AsDateTime := StrToDateTime('22/01/2014 14:05:03');
+    cds.Post;
+
+    jo := TConverter.New.DataSet(cds).AsJSONObject;
+    try
+      CheckEqualsString(JSON, jo.ToString);
+    finally
+      jo.Free;
+    end;
+
+    jo := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(JSON), 0) as TJSONObject;
+    try
+      TConverter.New.JSON(jo).ToDataSet(cds);
+      CheckFalse(cds.IsEmpty);
+      CheckTrue(cds.FieldByName('Value').AsDateTime = StrToDateTime('22/01/2014 14:05:03'));
     finally
       jo.Free;
     end;

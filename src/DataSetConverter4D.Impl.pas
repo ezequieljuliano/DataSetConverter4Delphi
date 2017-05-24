@@ -168,14 +168,14 @@ begin
             else
               Result.AddPair(key, TJSONNull.Create);
           end;
-        TFieldType.ftDateTime:
+        TFieldType.ftTimeStamp, TFieldType.ftDateTime:
           begin
             if not dataSet.Fields[i].IsNull then
               Result.AddPair(key, TJSONString.Create(DateTimeToISOTimeStamp(dataSet.Fields[i].AsDateTime)))
             else
               Result.AddPair(key, TJSONNull.Create);
           end;
-        TFieldType.ftTimeStamp, TFieldType.ftTime:
+        TFieldType.ftTime:
           begin
             if not dataSet.Fields[i].IsNull then
             begin
@@ -411,14 +411,14 @@ begin
             else
               field.AsDateTime := ISODateToDate(jv.Value);
           end;
-        TFieldType.ftDateTime:
+        TFieldType.ftTimeStamp, TFieldType.ftDateTime:
           begin
             if jv is TJSONNull then
               field.Clear
             else
               field.AsDateTime := ISOTimeStampToDateTime(jv.Value);
           end;
-        TFieldType.ftTimeStamp, TFieldType.ftTime:
+        TFieldType.ftTime:
           begin
             if jv is TJSONNull then
               field.Clear
