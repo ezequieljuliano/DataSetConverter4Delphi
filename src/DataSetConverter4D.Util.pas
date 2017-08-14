@@ -18,7 +18,7 @@ function ISODateToDate(const date: string): TDate;
 function ISOTimeToTime(const time: string): TTime;
 
 function NewDataSetField(dataSet: TDataSet; const fieldType: TFieldType; const fieldName: string;
-  const size: Integer = 0; const origin: string = ''): TField;
+  const size: Integer = 0; const origin: string = ''; const displaylabel: string = ''): TField;
 
 function BooleanToJSON(const value: Boolean): TJSONValue;
 function BooleanFieldToType(const booleanField: TBooleanField): TBooleanFieldType;
@@ -64,7 +64,7 @@ begin
 end;
 
 function NewDataSetField(dataSet: TDataSet; const fieldType: TFieldType; const fieldName: string;
-  const size: Integer = 0; const origin: string = ''): TField;
+  const size: Integer = 0; const origin: string = ''; const displaylabel: string = ''): TField;
 begin
   Result := DefaultFieldClasses[fieldType].Create(dataSet);
   Result.FieldName := fieldName;
@@ -77,6 +77,8 @@ begin
   Result.Name := dataSet.Name + Result.FieldName;
   Result.Size := size;
   Result.Origin := origin;
+  if not(displaylabel.IsEmpty) then
+    Result.DisplayLabel := displaylabel;
 
   if (fieldType in [ftString, ftWideString]) and (size <= 0) then
     raise EDataSetConverterException.CreateFmt('Size not defined for field "%s".', [fieldName]);
