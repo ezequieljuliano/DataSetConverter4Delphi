@@ -24,6 +24,8 @@ function BooleanToJSON(const value: Boolean): TJSONValue;
 function BooleanFieldToType(const booleanField: TBooleanField): TBooleanFieldType;
 function DataSetFieldToType(const dataSetField: TDataSetField): TDataSetFieldType;
 
+function DataTypeToString(fieldType: TFieldType): String;
+
 implementation
 
 function DateTimeToISOTimeStamp(const dateTime: TDateTime): string;
@@ -118,6 +120,125 @@ begin
   for index := Ord(Low(TDataSetFieldType)) to Ord(High(TDataSetFieldType)) do
     if (LowerCase(DESC_DATASET_FIELD_TYPE[TDataSetFieldType(index)]) = LowerCase(origin)) then
       Exit(TDataSetFieldType(index));
+end;
+
+function DataTypeToString(fieldType: TFieldType): String;
+begin
+  case fieldType of
+    // 0..4
+    ftUnknown:
+      Result := 'ftUnknown';
+    ftString:
+      Result := 'ftString';
+    ftSmallint:
+      Result := 'ftSmallint';
+    ftInteger:
+      Result := 'ftInteger';
+    ftWord:
+      Result := 'ftWord';
+    // 5..11
+    ftBoolean:
+      Result := 'ftBoolean';
+    ftFloat:
+      Result := 'ftFloat';
+    ftCurrency:
+      Result := 'ftCurrency';
+    ftBCD:
+      Result := 'ftBCD';
+    ftDate:
+      Result := 'ftDate';
+    ftTime:
+      Result := 'ftTime';
+    ftDateTime:
+      Result := 'ftDateTime';
+    // 12..18 result := '12..1';
+    ftBytes:
+      Result := 'ftBytes';
+    ftVarBytes:
+      Result := 'ftVarBytes';
+    ftAutoInc:
+      Result := 'ftAutoInc';
+    ftBlob:
+      Result := 'ftBlob';
+    ftMemo:
+      Result := 'ftMemo';
+    ftGraphic:
+      Result := 'ftGraphic';
+    ftFmtMemo:
+      Result := 'ftFmtMemo';
+    // 19..24 result := '19..2';
+    ftParadoxOle:
+      Result := 'ftParadoxOle';
+    ftDBaseOle:
+      Result := 'ftDBaseOle';
+    ftTypedBinary:
+      Result := 'ftTypedBinary';
+    ftCursor:
+      Result := 'ftCursor';
+    ftFixedChar:
+      Result := 'ftFixedChar';
+    ftWideString:
+      Result := 'ftWideString';
+    // 25..31 result := '25..3';
+    ftLargeint:
+      Result := 'ftLargeint';
+    ftADT:
+      Result := 'ftADT';
+    ftArray:
+      Result := 'ftArray';
+    ftReference:
+      Result := 'ftReference';
+    ftDataSet:
+      Result := 'ftDataSet';
+    ftOraBlob:
+      Result := 'ftOraBlob';
+    ftOraClob:
+      Result := 'ftOraClob';
+    // 32..37 result := '32..3';
+    ftVariant:
+      Result := 'ftVariant';
+    ftInterface:
+      Result := 'ftInterface';
+    ftIDispatch:
+      Result := 'ftIDispatch';
+    ftGuid:
+      Result := 'ftGuid';
+    ftTimeStamp:
+      Result := 'ftTimeStamp';
+    ftFMTBcd:
+      Result := 'ftFMTBcd';
+    // 38..41 result := '38..4';
+    ftFixedWideChar:
+      Result := 'ftFixedWideChar';
+    ftWideMemo:
+      Result := 'ftWideMemo';
+    ftOraTimeStamp:
+      Result := 'ftOraTimeStamp';
+    ftOraInterval:
+      Result := 'ftOraInterval';
+    // 42..48 result := '42..4';
+    ftLongWord:
+      Result := 'ftLongWord';
+    ftShortint:
+      Result := 'ftShortint';
+    ftByte:
+      Result := 'ftByte';
+    ftExtended:
+      Result := 'ftExtended';
+    ftConnection:
+      Result := 'ftConnection';
+    ftParams:
+      Result := 'ftParams';
+    ftStream:
+      Result := 'ftStream';
+    // 49..51 result := '49..5';
+    ftTimeStampOffset:
+      Result := 'ftTimeStampOffset';
+    ftObject:
+      Result := 'ftObject';
+    ftSingle:
+      Result := 'ftSingle';
+  end;
 end;
 
 end.
