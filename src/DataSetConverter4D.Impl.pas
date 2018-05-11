@@ -1,5 +1,5 @@
 unit DataSetConverter4D.Impl;
-
+
 interface
 
 uses
@@ -25,7 +25,8 @@ type
     function GetDataSet: TDataSet;
 
     function DataSetToJSONObject(dataSet: TDataSet): TJSONObject;
-    function DataSetToJSONArray(dataSet: TDataSet): TJSONArray;
+    function DataSetToJSONArray(dataSet: TDataSet; struct: boolean = false): TJSONArray;
+    function DataSetStructToJSONObject(dataSet: TDataSet): TJSONObject;
 
     function Source(dataSet: TDataSet): IDataSetConverter; overload;
     function Source(dataSet: TDataSet; const owns: Boolean): IDataSetConverter; overload;
@@ -104,7 +105,7 @@ begin
   fOwns := False;
 end;
 
-function TDataSetConverter.DataSetToJSONArray(dataSet: TDataSet): TJSONArray;
+function TDataSetConverter.DataSetToJSONArray(dataSet: TDataSet; struct: boolean = false): TJSONArray;
 var
   bookMark: TBookmark;
 begin
@@ -112,6 +113,9 @@ begin
   if Assigned(dataSet) and (not dataSet.IsEmpty) then
     try
       Result := TJSONArray.Create;
+      // First array item may be the table estructure.
+      if struct then
+        Result.AddElement(DataSetStructToJSONObject(dataset));
       bookMark := dataSet.Bookmark;
       dataSet.First;
       while not dataSet.Eof do
@@ -233,6 +237,24 @@ begin
       else
         raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [key]);
       end;
+    end;
+  end;
+end;
+
+function TDataSetConverter.DataSetStructToJSONObject(dataSet: TDataSet): TJSONObject;
+var
+  i: Integer;
+  jsonField: TJSONObject;
+begin
+  Result := nil;
+  if Assigned(dataSet) and (not dataSet.IsEmpty) then
+  begin
+    Result := TJSONObject.Create;
+    for i := 0 to Pred(dataSet.FieldCount) do
+    begin
+      jsonField := TJSONObject.Create;
+      jsonField.AddPair( DataTypeToString(dataSet.Fields[i].DataType), TJSONNumber.Create(dataSet.Fields[i].Size) );
+      Result.AddPair(dataSet.Fields[i].FieldName, jsonField);
     end;
   end;
 end;
@@ -569,4 +591,4 @@ begin
 end;
 
 end.
-
+
