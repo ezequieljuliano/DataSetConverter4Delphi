@@ -20,7 +20,7 @@ type
     function Source(dataSet: TDataSet; const owns: Boolean): IDataSetConverter; overload;
 
     function AsJSONObject: TJSONObject;
-    function AsJSONArray: TJSONArray;
+    function AsJSONArray(struct: boolean = false): TJSONArray;
   end;
 
   IJSONConverter = interface
