@@ -35,6 +35,8 @@ type
     procedure Test_Inssue_2;
     procedure Test_Inssue_7;
     procedure TestBlobAndText;
+    procedure TestConvertStructureToJSON;
+    procedure TestConvertJSONToStructure;
   end;
 
 implementation
@@ -293,6 +295,51 @@ begin
   CheckFalse(fCdsCustomers.IsEmpty);
 end;
 
+procedure TTestsDataSetConverter.TestConvertJSONToStructure;
+const
+  JSON = '[{' +
+    '"FieldName":"Id",' +
+    '"DataType":"ftInteger",' +
+    '"Size":0' +
+    '},{' +
+    '"FieldName":"Description",' +
+    '"DataType":"ftString",' +
+    '"Size":100' +
+    '},{' +
+    '"FieldName":"Value",' +
+    '"DataType":"ftFloat",' +
+    '"Size":0' +
+    '}]';
+var
+  cds: TClientDataSet;
+  ja: TJSONArray;
+begin
+  cds := TClientDataSet.Create(nil);
+  try
+    ja := TJSONObject.ParseJSONValue(TEncoding.ASCII.GetBytes(JSON), 0) as TJSONArray;
+    try
+      TConverter.New.JSON(ja).ToStructure(cds);
+      cds.CreateDataSet;
+
+      CheckTrue(cds.Fields[0].FieldName = 'Id');
+      CheckTrue(cds.Fields[0].DataType = ftInteger);
+      CheckTrue(cds.Fields[0].Size = 0);
+
+      CheckTrue(cds.Fields[1].FieldName = 'Description');
+      CheckTrue(cds.Fields[1].DataType = ftString);
+      CheckTrue(cds.Fields[1].Size = 100);
+
+      CheckTrue(cds.Fields[2].FieldName = 'Value');
+      CheckTrue(cds.Fields[2].DataType = ftFloat);
+      CheckTrue(cds.Fields[2].Size = 0);
+    finally
+      ja.Free;
+    end;
+  finally
+    cds.Free;
+  end;
+end;
+
 procedure TTestsDataSetConverter.TestJSONConverter;
 const
   JSON_1 =
@@ -353,6 +400,43 @@ begin
     end;
   finally
     ja.Free;
+  end;
+end;
+
+procedure TTestsDataSetConverter.TestConvertStructureToJSON;
+const
+  JSON = '[{' +
+    '"FieldName":"Id",' +
+    '"DataType":"ftInteger",' +
+    '"Size":0' +
+    '},{' +
+    '"FieldName":"Description",' +
+    '"DataType":"ftString",' +
+    '"Size":100' +
+    '},{' +
+    '"FieldName":"Value",' +
+    '"DataType":"ftFloat",' +
+    '"Size":0' +
+    '}]';
+var
+  cds: TClientDataSet;
+  ja: TJSONArray;
+begin
+  cds := TClientDataSet.Create(nil);
+  try
+    NewDataSetField(cds, ftInteger, 'Id');
+    NewDataSetField(cds, ftString, 'Description', 100);
+    NewDataSetField(cds, ftFloat, 'Value');
+    cds.CreateDataSet;
+
+    ja := TConverter.New.DataSet(cds).AsJSONStructure;
+    try
+      CheckEqualsString(JSON, ja.ToString);
+    finally
+      ja.Free;
+    end;
+  finally
+    cds.Free;
   end;
 end;
 

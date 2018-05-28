@@ -21,6 +21,7 @@ type
 
     function AsJSONObject: TJSONObject;
     function AsJSONArray: TJSONArray;
+    function AsJSONStructure: TJSONArray;
   end;
 
   IJSONConverter = interface
@@ -33,6 +34,7 @@ type
 
     procedure ToDataSet(dataSet: TDataSet);
     procedure ToRecord(dataSet: TDataSet);
+    procedure ToStructure(dataSet: TDataSet);
   end;
 
   IConverter = interface

@@ -8,6 +8,7 @@ uses
   System.JSON,
   System.DateUtils,
   System.NetEncoding,
+  System.TypInfo,
   Data.SqlTimSt,
   Data.FmtBcd,
   Data.DB,
@@ -26,12 +27,14 @@ type
 
     function DataSetToJSONObject(dataSet: TDataSet): TJSONObject;
     function DataSetToJSONArray(dataSet: TDataSet): TJSONArray;
+    function StructureToJSON(dataSet: TDataSet): TJSONArray;
 
     function Source(dataSet: TDataSet): IDataSetConverter; overload;
     function Source(dataSet: TDataSet; const owns: Boolean): IDataSetConverter; overload;
 
     function AsJSONObject: TJSONObject;
     function AsJSONArray: TJSONArray;
+    function AsJSONStructure: TJSONArray;
   public
     constructor Create;
     destructor Destroy; override;
@@ -49,6 +52,7 @@ type
   protected
     procedure JSONObjectToDataSet(json: TJSONObject; dataSet: TDataSet; const recNo: Integer; const isRecord: Boolean);
     procedure JSONArrayToDataSet(json: TJSONArray; dataSet: TDataSet; const isRecord: Boolean);
+    procedure JSONToStructure(json: TJSONArray; dataSet: TDataSet);
 
     function Source(json: TJSONObject): IJSONConverter; overload;
     function Source(json: TJSONObject; const owns: Boolean): IJSONConverter; overload;
@@ -58,6 +62,7 @@ type
 
     procedure ToDataSet(dataSet: TDataSet);
     procedure ToRecord(dataSet: TDataSet);
+    procedure ToStructure(dataSet: TDataSet);
   public
     constructor Create;
     destructor Destroy; override;
@@ -271,6 +276,31 @@ begin
   Result := Self;
 end;
 
+function TDataSetConverter.AsJSONStructure: TJSONArray;
+begin
+  Result := StructureToJSON(GetDataSet);
+end;
+
+function TDataSetConverter.StructureToJSON(dataSet: TDataSet): TJSONArray;
+var
+  i: Integer;
+  jo: TJSONObject;
+begin
+  Result := nil;
+  if Assigned(dataSet) and (dataSet.FieldCount > 0) then
+  begin
+    Result := TJSONArray.Create;
+    for i := 0 to Pred(dataSet.FieldCount) do
+    begin
+      jo := TJSONObject.Create;
+      jo.AddPair('FieldName', TJSONString.Create(dataSet.Fields[i].FieldName));
+      jo.AddPair('DataType', TJSONString.Create(GetEnumName(TypeInfo(TFieldType), Integer(dataSet.Fields[i].DataType))));
+      jo.AddPair('Size', TJSONNumber.Create(dataSet.Fields[i].Size));
+      Result.AddElement(jo);
+    end;
+  end;
+end;
+
 function TDataSetConverter.Source(dataSet: TDataSet): IDataSetConverter;
 begin
   Result := Source(dataSet, False);
@@ -470,6 +500,29 @@ begin
   end;
 end;
 
+procedure TJSONConverter.JSONToStructure(json: TJSONArray; dataSet: TDataSet);
+var
+  jv: TJSONValue;
+begin
+  if Assigned(json) and Assigned(dataSet) then
+  begin
+    if dataSet.Active then
+      raise EDataSetConverterException.Create('The DataSet can not be active.');
+
+    if (dataSet.FieldCount > 0) then
+      raise EDataSetConverterException.Create('The DataSet can not have predefined Fields.');
+
+    for jv in json do
+    begin
+      NewDataSetField(dataSet, 
+        TFieldType(GetEnumValue(TypeInfo(TFieldType), (jv as TJSONObject).GetValue('DataType').Value)), 
+        (jv as TJSONObject).GetValue('FieldName').Value, 
+        StrToIntDef((jv as TJSONObject).GetValue('Size').Value, 0)
+        );
+    end;
+  end;
+end;
+
 class function TJSONConverter.New: IJSONConverter;
 begin
   Result := TJSONConverter.Create;
@@ -519,6 +572,16 @@ begin
   finally
     fIsRecord := False;
   end;
+end;
+
+procedure TJSONConverter.ToStructure(dataSet: TDataSet);
+begin
+  if Assigned(fJSONObject) then
+    raise EDataSetConverterException.Create('To convert a structure only JSONArray is allowed.')
+  else if Assigned(fJSONArray) then
+    JSONToStructure(fJSONArray, dataSet)
+  else
+    raise EDataSetConverterException.Create('JSON Value Uninformed.');
 end;
 
 { TConverter }
