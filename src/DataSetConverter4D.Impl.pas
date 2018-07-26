@@ -148,95 +148,98 @@ begin
     Result := TJSONObject.Create;
     for i := 0 to Pred(dataSet.FieldCount) do
     begin
-      key := dataSet.Fields[i].FieldName;
-      case dataSet.Fields[i].DataType of
-        TFieldType.ftBoolean:
-          begin
-            bft := BooleanFieldToType(TBooleanField(dataSet.Fields[i]));
-            case bft of
-              bfUnknown, bfBoolean: Result.AddPair(key, BooleanToJSON(dataSet.Fields[i].AsBoolean));
-              bfInteger: Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsInteger));
-            end;
-          end;
-        TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
-          Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsInteger));
-        TFieldType.ftLargeint:
-          Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
-        TFieldType.ftSingle, TFieldType.ftFloat:
-          Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsFloat));
-        ftString, ftWideString, ftMemo, ftWideMemo:
-          Result.AddPair(key, TJSONString.Create(dataSet.Fields[i].AsWideString));
-        TFieldType.ftDate:
-          begin
-            if not dataSet.Fields[i].IsNull then
-              Result.AddPair(key, TJSONString.Create(DateToISODate(dataSet.Fields[i].AsDateTime)))
-            else
-              Result.AddPair(key, TJSONNull.Create);
-          end;
-        TFieldType.ftTimeStamp, TFieldType.ftDateTime:
-          begin
-            if not dataSet.Fields[i].IsNull then
-              Result.AddPair(key, TJSONString.Create(DateTimeToISOTimeStamp(dataSet.Fields[i].AsDateTime)))
-            else
-              Result.AddPair(key, TJSONNull.Create);
-          end;
-        TFieldType.ftTime:
-          begin
-            if not dataSet.Fields[i].IsNull then
+      if dataSet.Fields[i].Visible then
+      begin
+        key := dataSet.Fields[i].FieldName;
+        case dataSet.Fields[i].DataType of
+          TFieldType.ftBoolean:
             begin
-              timeStamp := dataSet.Fields[i].AsSQLTimeStamp;
-              Result.AddPair(key, TJSONString.Create(SQLTimeStampToStr('hh:nn:ss', timeStamp)));
-            end
-            else
-              Result.AddPair(key, TJSONNull.Create);
-          end;
-        TFieldType.ftCurrency:
-          begin
-            if not dataSet.Fields[i].IsNull then
-              Result.AddPair(key, TJSONString.Create(FormatCurr('0.00##', dataSet.Fields[i].AsCurrency)))
-            else
-              Result.AddPair(key, TJSONNull.Create);
-          end;
-        TFieldType.ftFMTBcd, TFieldType.ftBCD:
-          begin
-            if not dataSet.Fields[i].IsNull then
-              Result.AddPair(key, TJSONNumber.Create(BcdToDouble(dataSet.Fields[i].AsBcd)))
-            else
-              Result.AddPair(key, TJSONNull.Create);
-          end;
-        TFieldType.ftDataSet:
-          begin
-            dft := DataSetFieldToType(TDataSetField(dataSet.Fields[i]));
-            nestedDataSet := TDataSetField(dataSet.Fields[i]).NestedDataSet;
-            case dft of
-              dfJSONObject:
-                Result.AddPair(key, DataSetToJSONObject(nestedDataSet));
-              dfJSONArray:
-                Result.AddPair(key, DataSetToJSONArray(nestedDataSet));
-            end;
-          end;
-        TFieldType.ftGraphic, TFieldType.ftBlob, TFieldType.ftStream:
-          begin
-            ms := TMemoryStream.Create;
-            try
-              TBlobField(dataSet.Fields[I]).SaveToStream(ms);
-              ms.Position := 0;
-              ss := TStringStream.Create;
-              try
-                TNetEncoding.Base64.Encode(ms, ss);
-                Result.AddPair(key, TJSONString.Create(ss.DataString));
-              finally
-                ss.Free;
+              bft := BooleanFieldToType(TBooleanField(dataSet.Fields[i]));
+              case bft of
+                bfUnknown, bfBoolean: Result.AddPair(key, BooleanToJSON(dataSet.Fields[i].AsBoolean));
+                bfInteger: Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsInteger));
               end;
-            finally
-              ms.Free;
             end;
-          end;
-        TFieldType.ftAutoInc:
-          begin
-          end
-      else
-        raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [key]);
+          TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
+            Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsInteger));
+          TFieldType.ftLargeint:
+            Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
+          TFieldType.ftSingle, TFieldType.ftFloat:
+            Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsFloat));
+          ftString, ftWideString, ftMemo, ftWideMemo:
+            Result.AddPair(key, TJSONString.Create(dataSet.Fields[i].AsWideString));
+          TFieldType.ftDate:
+            begin
+              if not dataSet.Fields[i].IsNull then
+                Result.AddPair(key, TJSONString.Create(DateToISODate(dataSet.Fields[i].AsDateTime)))
+              else
+                Result.AddPair(key, TJSONNull.Create);
+            end;
+          TFieldType.ftTimeStamp, TFieldType.ftDateTime:
+            begin
+              if not dataSet.Fields[i].IsNull then
+                Result.AddPair(key, TJSONString.Create(DateTimeToISOTimeStamp(dataSet.Fields[i].AsDateTime)))
+              else
+                Result.AddPair(key, TJSONNull.Create);
+            end;
+          TFieldType.ftTime:
+            begin
+              if not dataSet.Fields[i].IsNull then
+              begin
+                timeStamp := dataSet.Fields[i].AsSQLTimeStamp;
+                Result.AddPair(key, TJSONString.Create(SQLTimeStampToStr('hh:nn:ss', timeStamp)));
+              end
+              else
+                Result.AddPair(key, TJSONNull.Create);
+            end;
+          TFieldType.ftCurrency:
+            begin
+              if not dataSet.Fields[i].IsNull then
+                Result.AddPair(key, TJSONString.Create(FormatCurr('0.00##', dataSet.Fields[i].AsCurrency)))
+              else
+                Result.AddPair(key, TJSONNull.Create);
+            end;
+          TFieldType.ftFMTBcd, TFieldType.ftBCD:
+            begin
+              if not dataSet.Fields[i].IsNull then
+                Result.AddPair(key, TJSONNumber.Create(BcdToDouble(dataSet.Fields[i].AsBcd)))
+              else
+                Result.AddPair(key, TJSONNull.Create);
+            end;
+          TFieldType.ftDataSet:
+            begin
+              dft := DataSetFieldToType(TDataSetField(dataSet.Fields[i]));
+              nestedDataSet := TDataSetField(dataSet.Fields[i]).NestedDataSet;
+              case dft of
+                dfJSONObject:
+                  Result.AddPair(key, DataSetToJSONObject(nestedDataSet));
+                dfJSONArray:
+                  Result.AddPair(key, DataSetToJSONArray(nestedDataSet));
+              end;
+            end;
+          TFieldType.ftGraphic, TFieldType.ftBlob, TFieldType.ftStream:
+            begin
+              ms := TMemoryStream.Create;
+              try
+                TBlobField(dataSet.Fields[I]).SaveToStream(ms);
+                ms.Position := 0;
+                ss := TStringStream.Create;
+                try
+                  TNetEncoding.Base64.Encode(ms, ss);
+                  Result.AddPair(key, TJSONString.Create(ss.DataString));
+                finally
+                  ss.Free;
+                end;
+              finally
+                ms.Free;
+              end;
+            end;
+          TFieldType.ftAutoInc:
+            begin
+            end
+        else
+          raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [key]);
+        end;
       end;
     end;
   end;
