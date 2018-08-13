@@ -37,6 +37,7 @@ type
     procedure TestBlobAndText;
     procedure TestConvertStructureToJSON;
     procedure TestConvertJSONToStructure;
+    procedure TestConvertDataSetToJSONBasicInvisibleFields;
   end;
 
 implementation
@@ -180,6 +181,44 @@ begin
   CheckEqualsString(JSON_ARRAY, ja.ToString);
 
   jo := fCdsCustomers.AsJSONObject;
+  CheckEqualsString(JSON_OBJECT, jo.ToString);
+
+  ja.Free;
+  jo.Free;
+end;
+
+procedure TTestsDataSetConverter.TestConvertDataSetToJSONBasicInvisibleFields;
+const
+  JSON_ARRAY =
+    '[{"Id":1,"Birth":"2014-01-22 14:05:03"},' +
+    '{"Id":2,"Birth":"2014-01-22 14:05:03"}]';
+  JSON_OBJECT =
+    '{"Id":2,"Birth":"2014-01-22 14:05:03"}';
+var
+  ja: TJSONArray;
+  jo: TJSONObject;
+begin
+  fCdsCustomers.DataSetField := nil;
+  fCdsCustomers.CreateDataSet;
+
+  fCdsCustomers.FieldByName('Name').Visible := False;
+
+  fCdsCustomers.Append;
+  fCdsCustomers.FieldByName('Id').AsInteger := 1;
+  fCdsCustomers.FieldByName('Name').AsString := 'Customers 1';
+  fCdsCustomers.FieldByName('Birth').AsDateTime := StrToDateTime('22/01/2014 14:05:03');
+  fCdsCustomers.Post;
+
+  fCdsCustomers.Append;
+  fCdsCustomers.FieldByName('Id').AsInteger := 2;
+  fCdsCustomers.FieldByName('Name').AsString := 'Customers 2';
+  fCdsCustomers.FieldByName('Birth').AsDateTime := StrToDateTime('22/01/2014 14:05:03');
+  fCdsCustomers.Post;
+
+  ja := TConverter.New.DataSet(fCdsCustomers).AsJSONArray;
+  CheckEqualsString(JSON_ARRAY, ja.ToString);
+
+  jo := TConverter.New.DataSet.Source(fCdsCustomers).AsJSONObject;
   CheckEqualsString(JSON_OBJECT, jo.ToString);
 
   ja.Free;

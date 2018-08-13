@@ -414,21 +414,14 @@ begin
             if jv is TJSONNull then
               field.Clear
             else
-              field.AsCurrency := (jv as TJSONNumber).AsDouble;
+              field.AsCurrency := StrToCurr(jv.Value);
           end;
-        TFieldType.ftSingle:
+        TFieldType.ftFloat, TFieldType.ftFMTBcd, TFieldType.ftBCD, TFieldType.ftSingle:
           begin
             if jv is TJSONNull then
               field.Clear
             else
-              field.AsSingle := (jv as TJSONNumber).AsDouble;
-          end;
-        TFieldType.ftFloat, TFieldType.ftFMTBcd, TFieldType.ftBCD:
-          begin
-            if jv is TJSONNull then
-              field.Clear
-            else
-              field.AsFloat := (jv as TJSONNumber).AsDouble;
+              field.AsFloat := StrToFloat(jv.Value);
           end;
         ftString, ftWideString, ftMemo, ftWideMemo:
           begin
