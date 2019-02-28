@@ -1,5 +1,5 @@
 unit DataSetConverter4D.Impl;
-
+
 interface
 
 uses
@@ -162,12 +162,24 @@ begin
             end;
           TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
             Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsInteger));
+          TFieldType.ftLongWord, TFieldType.ftAutoInc:
+            begin
+              if not dataSet.Fields[i].IsNull then
+                Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsWideString))
+              else
+                Result.AddPair(key, TJSONNull.Create);
+            end;
           TFieldType.ftLargeint:
             Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
           TFieldType.ftSingle, TFieldType.ftFloat:
             Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsFloat));
           ftString, ftWideString, ftMemo, ftWideMemo:
-            Result.AddPair(key, TJSONString.Create(dataSet.Fields[i].AsWideString));
+            begin
+              if not dataSet.Fields[i].IsNull then
+                Result.AddPair(key, TJSONString.Create(dataSet.Fields[i].AsWideString))
+              else
+                Result.AddPair(key, TJSONNull.Create);
+            end;
           TFieldType.ftDate:
             begin
               if not dataSet.Fields[i].IsNull then
@@ -234,9 +246,6 @@ begin
                 ms.Free;
               end;
             end;
-          TFieldType.ftAutoInc:
-            begin
-            end
         else
           raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [key]);
         end;
@@ -395,7 +404,7 @@ begin
             else if jv.TryGetValue<Boolean>(booleanValue) then
               field.AsBoolean := booleanValue;
           end;
-        TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
+        TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint, TFieldType.ftLongWord:
           begin
             if jv is TJSONNull then
               field.Clear
@@ -628,4 +637,4 @@ begin
 end;
 
 end.
-
+
