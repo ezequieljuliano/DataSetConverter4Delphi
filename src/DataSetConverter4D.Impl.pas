@@ -50,8 +50,8 @@ type
     fIsRecord: Boolean;
     procedure ClearJSONs;
   protected
-    procedure JSONObjectToDataSet(JSON: TJSONObject; dataSet: TDataSet; const recNo: Integer; const isRecord: Boolean);
-    procedure JSONArrayToDataSet(JSON: TJSONArray; dataSet: TDataSet; const isRecord: Boolean);
+    procedure JSONObjectToDataSet(JSON: TJSONObject; dataSet: TDataSet; const recNo: Integer; const isRecord: Boolean; const OwnerControl: Boolean);
+    procedure JSONArrayToDataSet(JSON: TJSONArray; dataSet: TDataSet; const isRecord: Boolean; const OwnerControl: Boolean);
     procedure JSONToStructure(JSON: TJSONArray; dataSet: TDataSet);
 
     function Source(JSON: TJSONObject): IJSONConverter; overload;
@@ -60,8 +60,8 @@ type
     function Source(JSON: TJSONArray): IJSONConverter; overload;
     function Source(JSON: TJSONArray; const owns: Boolean): IJSONConverter; overload;
 
-    procedure ToDataSet(dataSet: TDataSet);
-    procedure ToRecord(dataSet: TDataSet);
+    procedure ToDataSet(dataSet: TDataSet; const OwnerControl: Boolean);
+    procedure ToRecord(dataSet: TDataSet; const OwnerControl:Boolean);
     procedure ToStructure(dataSet: TDataSet);
   public
     constructor Create;
@@ -320,7 +320,7 @@ begin
   fJSONArray := nil;
 end;
 
-procedure TJSONConverter.JSONArrayToDataSet(JSON: TJSONArray; dataSet: TDataSet; const isRecord: Boolean);
+procedure TJSONConverter.JSONArrayToDataSet(JSON: TJSONArray; dataSet: TDataSet; const isRecord: Boolean; const OwnerControl: Boolean);
 var
   jv: TJSONValue;
   recNo: Integer;
@@ -333,14 +333,15 @@ begin
       if not dataSet.IsEmpty then
         Inc(recNo);
       if (jv is TJSONArray) then
-        JSONArrayToDataSet(jv as TJSONArray, dataSet, isRecord)
+        JSONArrayToDataSet(jv as TJSONArray, dataSet, isRecord, OwnerControl)
       else
-        JSONObjectToDataSet(jv as TJSONObject, dataSet, recNo, isRecord);
+        JSONObjectToDataSet(jv as TJSONObject, dataSet, recNo, isRecord, OwnerControl);
     end;
   end;
 end;
 
-procedure TJSONConverter.JSONObjectToDataSet(JSON: TJSONObject; dataSet: TDataSet; const recNo: Integer; const isRecord: Boolean);
+procedure TJSONConverter.JSONObjectToDataSet(JSON: TJSONObject; dataSet: TDataSet; const recNo: Integer; const isRecord: Boolean;
+  const OwnerControl: Boolean);
 var
   field: TField;
   jv: TJSONValue;
@@ -355,10 +356,13 @@ begin
     if (recNo > 0) and (dataSet.RecordCount > 1) then
       dataSet.recNo := recNo;
 
-    if isRecord then
-      dataSet.Edit
-    else
-      dataSet.Append;
+    if not OwnerControl then
+    begin
+      if isRecord then
+        dataSet.Edit
+      else
+        dataSet.Append;
+    end;
 
     for field in dataSet.Fields do
     begin
@@ -411,13 +415,13 @@ begin
             dft := DataSetFieldToType(TDataSetField(field));
             nestedDataSet := TDataSetField(field).nestedDataSet;
             case dft of
-              dfJSONObject: JSONObjectToDataSet(jv as TJSONObject, nestedDataSet, 0, True);
+              dfJSONObject: JSONObjectToDataSet(jv as TJSONObject, nestedDataSet, 0, True, OwnerControl);
               dfJSONArray:
                 begin
                   nestedDataSet.First;
                   while not nestedDataSet.Eof do
                     nestedDataSet.Delete;
-                  JSONArrayToDataSet(jv as TJSONArray, nestedDataSet, False);
+                  JSONArrayToDataSet(jv as TJSONArray, nestedDataSet, False, OwnerControl);
                 end;
             end;
           end;
@@ -440,7 +444,9 @@ begin
       else raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [field.FieldName]);
       end;
     end;
-    dataSet.Post;
+
+    if not OwnerControl then
+      dataSet.Post;
   end;
 end;
 
@@ -495,21 +501,21 @@ begin
   Result := Source(JSON, False);
 end;
 
-procedure TJSONConverter.ToDataSet(dataSet: TDataSet);
+procedure TJSONConverter.ToDataSet(dataSet: TDataSet; const OwnerControl: Boolean);
 begin
   if Assigned(fJSONObject) then
-    JSONObjectToDataSet(fJSONObject, dataSet, 0, fIsRecord)
+    JSONObjectToDataSet(fJSONObject, dataSet, 0, fIsRecord, OwnerControl)
   else if Assigned(fJSONArray) then
-    JSONArrayToDataSet(fJSONArray, dataSet, fIsRecord)
+    JSONArrayToDataSet(fJSONArray, dataSet, fIsRecord, OwnerControl)
   else
     raise EDataSetConverterException.Create('JSON Value Uninformed.');
 end;
 
-procedure TJSONConverter.ToRecord(dataSet: TDataSet);
+procedure TJSONConverter.ToRecord(dataSet: TDataSet; const OwnerControl:Boolean);
 begin
   fIsRecord := True;
   try
-    ToDataSet(dataSet);
+    ToDataSet(dataSet, OwnerControl);
   finally
     fIsRecord := False;
   end;

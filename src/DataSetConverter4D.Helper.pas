@@ -18,10 +18,10 @@ type
     function AsJSONObjectString: string;
     function AsJSONArrayString: string;
 
-    procedure FromJSONObject(json: TJSONObject);
-    procedure FromJSONArray(json: TJSONArray);
+    procedure FromJSONObject(JSON: TJSONObject);
+    procedure FromJSONArray(JSON: TJSONArray);
 
-    procedure RecordFromJSONObject(json: TJSONObject);
+    procedure RecordFromJSONObject(JSON: TJSONObject);
   end;
 
 implementation
@@ -62,19 +62,19 @@ begin
   end;
 end;
 
-procedure TDataSetConverterHelper.FromJSONArray(json: TJSONArray);
+procedure TDataSetConverterHelper.FromJSONArray(JSON: TJSONArray);
 begin
-  TConverter.New.JSON(json).ToDataSet(Self);
+  TConverter.New.JSON(JSON).ToDataSet(Self, False);
 end;
 
-procedure TDataSetConverterHelper.FromJSONObject(json: TJSONObject);
+procedure TDataSetConverterHelper.FromJSONObject(JSON: TJSONObject);
 begin
-  TConverter.New.JSON(json).ToDataSet(Self);
+  TConverter.New.JSON(JSON).ToDataSet(Self, False);
 end;
 
-procedure TDataSetConverterHelper.RecordFromJSONObject(json: TJSONObject);
+procedure TDataSetConverterHelper.RecordFromJSONObject(JSON: TJSONObject);
 begin
-  TConverter.New.JSON(json).ToRecord(Self);
+  TConverter.New.JSON(JSON).ToRecord(Self, False);
 end;
 
 end.

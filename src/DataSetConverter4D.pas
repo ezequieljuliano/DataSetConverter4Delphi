@@ -26,29 +26,29 @@ type
 
   IJSONConverter = interface
     ['{1B020937-438E-483F-ACB1-44B8B2707500}']
-    function Source(json: TJSONObject): IJSONConverter; overload;
-    function Source(json: TJSONObject; const owns: Boolean): IJSONConverter; overload;
+    function Source(JSON: TJSONObject): IJSONConverter; overload;
+    function Source(JSON: TJSONObject; const owns: Boolean): IJSONConverter; overload;
 
-    function Source(json: TJSONArray): IJSONConverter; overload;
-    function Source(json: TJSONArray; const owns: Boolean): IJSONConverter; overload;
+    function Source(JSON: TJSONArray): IJSONConverter; overload;
+    function Source(JSON: TJSONArray; const owns: Boolean): IJSONConverter; overload;
 
-    procedure ToDataSet(dataSet: TDataSet);
-    procedure ToRecord(dataSet: TDataSet);
+    procedure ToDataSet(dataSet: TDataSet; const OwnerControl: Boolean = False);
+    procedure ToRecord(dataSet: TDataSet; const OwnerControl: Boolean = False);
     procedure ToStructure(dataSet: TDataSet);
   end;
 
   IConverter = interface
     ['{52A3BE1E-5116-4A9A-A7B6-3AF0FCEB1D8E}']
-    function DataSet: IDataSetConverter; overload;
-    function DataSet(dataSet: TDataSet): IDataSetConverter; overload;
-    function DataSet(dataSet: TDataSet; const owns: Boolean): IDataSetConverter; overload;
+    function dataSet: IDataSetConverter; overload;
+    function dataSet(dataSet: TDataSet): IDataSetConverter; overload;
+    function dataSet(dataSet: TDataSet; const owns: Boolean): IDataSetConverter; overload;
 
     function JSON: IJSONConverter; overload;
-    function JSON(json: TJSONObject): IJSONConverter; overload;
-    function JSON(json: TJSONObject; const owns: Boolean): IJSONConverter; overload;
+    function JSON(JSON: TJSONObject): IJSONConverter; overload;
+    function JSON(JSON: TJSONObject; const owns: Boolean): IJSONConverter; overload;
 
-    function JSON(json: TJSONArray): IJSONConverter; overload;
-    function JSON(json: TJSONArray; const owns: Boolean): IJSONConverter; overload;
+    function JSON(JSON: TJSONArray): IJSONConverter; overload;
+    function JSON(JSON: TJSONArray; const owns: Boolean): IJSONConverter; overload;
   end;
 
 implementation
