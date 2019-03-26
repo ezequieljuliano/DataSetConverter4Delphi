@@ -1,6 +1,5 @@
 unit DataSetConverter4D.Impl;
 
-
 interface
 
 uses
@@ -279,6 +278,8 @@ begin
       jo.AddPair('FieldName', TJSONString.Create(dataSet.Fields[i].FieldName));
       jo.AddPair('DataType', TJSONString.Create(GetEnumName(TypeInfo(TFieldType), Integer(dataSet.Fields[i].DataType))));
       jo.AddPair('Size', TJSONNumber.Create(dataSet.Fields[i].Size));
+      jo.AddPair('Key', TJSONBool.Create(pfInKey in dataSet.Fields[i].ProviderFlags));
+      jo.AddPair('Origin', TJSONString.Create(dataSet.Fields[i].Origin));
       Result.AddElement(jo);
     end;
   end;
@@ -457,8 +458,8 @@ begin
 
     for jv in JSON do
     begin
-      NewDataSetField(dataSet, TFieldType(GetEnumValue(TypeInfo(TFieldType), (jv as TJSONObject).GetValue('DataType').Value)),
-        (jv as TJSONObject).GetValue('FieldName').Value, StrToIntDef((jv as TJSONObject).GetValue('Size').Value, 0));
+      NewDataSetField(dataSet, TFieldType(GetEnumValue(TypeInfo(TFieldType), jv.GetValue<string>('DataType'))), jv.GetValue<string>('FieldName'),
+        StrToIntDef(TJSONObject(jv).GetValue<string>('Size'), 0), jv.GetValue<string>('Origin'), '', jv.GetValue<Boolean>('Key'));
     end;
   end;
 end;
@@ -572,4 +573,3 @@ begin
 end;
 
 end.
-

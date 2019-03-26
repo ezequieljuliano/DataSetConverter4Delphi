@@ -1,5 +1,5 @@
 unit DataSetConverter4D.Util;
-
+
 interface
 
 uses
@@ -9,9 +9,8 @@ uses
   Data.DB,
   DataSetConverter4D;
 
-
 function NewDataSetField(dataSet: TDataSet; const fieldType: TFieldType; const fieldName: string; const size: Integer = 0; const origin: string = '';
-  const displaylabel: string = ''): TField;
+  const displaylabel: string = ''; const Key: Boolean = False): TField;
 
 function BooleanToJSON(const value: Boolean): TJSONValue;
 function BooleanFieldToType(const booleanField: TBooleanField): TBooleanFieldType;
@@ -42,7 +41,7 @@ begin
 end;
 
 function NewDataSetField(dataSet: TDataSet; const fieldType: TFieldType; const fieldName: string; const size: Integer = 0; const origin: string = '';
-  const displaylabel: string = ''): TField;
+  const displaylabel: string = ''; const Key: Boolean = False): TField;
 begin
   Result := DefaultFieldClasses[fieldType].Create(dataSet);
   Result.fieldName := fieldName;
@@ -57,6 +56,9 @@ begin
   Result.origin := origin;
   if not (displaylabel.IsEmpty) then
     Result.displaylabel := displaylabel;
+
+  if Key then
+    Result.ProviderFlags := [pfInKey];
 
   if (fieldType in [ftString, ftWideString]) and (size <= 0) then
     raise EDataSetConverterException.CreateFmt('Size not defined for field "%s".', [fieldName]);
@@ -124,3 +126,4 @@ begin
 end;
 
 end.
+
