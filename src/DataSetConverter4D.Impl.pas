@@ -337,6 +337,7 @@ begin
       else
         JSONObjectToDataSet(jv as TJSONObject, dataSet, recNo, isRecord, OwnerControl);
     end;
+    dataSet.First;
   end;
 end;
 
