@@ -50,18 +50,18 @@ type
     fIsRecord: Boolean;
     procedure ClearJSONs;
   protected
-    procedure JSONObjectToDataSet(json: TJSONObject; dataSet: TDataSet; const recNo: Integer; const isRecord: Boolean);
-    procedure JSONArrayToDataSet(json: TJSONArray; dataSet: TDataSet; const isRecord: Boolean);
-    procedure JSONToStructure(json: TJSONArray; dataSet: TDataSet);
+    procedure JSONObjectToDataSet(JSON: TJSONObject; dataSet: TDataSet; const recNo: Integer; const isRecord: Boolean; const OwnerControl: Boolean);
+    procedure JSONArrayToDataSet(JSON: TJSONArray; dataSet: TDataSet; const isRecord: Boolean; const OwnerControl: Boolean);
+    procedure JSONToStructure(JSON: TJSONArray; dataSet: TDataSet);
 
-    function Source(json: TJSONObject): IJSONConverter; overload;
-    function Source(json: TJSONObject; const owns: Boolean): IJSONConverter; overload;
+    function Source(JSON: TJSONObject): IJSONConverter; overload;
+    function Source(JSON: TJSONObject; const owns: Boolean): IJSONConverter; overload;
 
-    function Source(json: TJSONArray): IJSONConverter; overload;
-    function Source(json: TJSONArray; const owns: Boolean): IJSONConverter; overload;
+    function Source(JSON: TJSONArray): IJSONConverter; overload;
+    function Source(JSON: TJSONArray; const owns: Boolean): IJSONConverter; overload;
 
-    procedure ToDataSet(dataSet: TDataSet);
-    procedure ToRecord(dataSet: TDataSet);
+    procedure ToDataSet(dataSet: TDataSet; const OwnerControl: Boolean);
+    procedure ToRecord(dataSet: TDataSet; const OwnerControl:Boolean);
     procedure ToStructure(dataSet: TDataSet);
   public
     constructor Create;
@@ -74,16 +74,16 @@ type
   private
     { private declarations }
   protected
-    function DataSet: IDataSetConverter; overload;
-    function DataSet(dataSet: TDataSet): IDataSetConverter; overload;
-    function DataSet(dataSet: TDataSet; const owns: Boolean): IDataSetConverter; overload;
+    function dataSet: IDataSetConverter; overload;
+    function dataSet(dataSet: TDataSet): IDataSetConverter; overload;
+    function dataSet(dataSet: TDataSet; const owns: Boolean): IDataSetConverter; overload;
 
     function JSON: IJSONConverter; overload;
-    function JSON(json: TJSONObject): IJSONConverter; overload;
-    function JSON(json: TJSONObject; const owns: Boolean): IJSONConverter; overload;
+    function JSON(JSON: TJSONObject): IJSONConverter; overload;
+    function JSON(JSON: TJSONObject; const owns: Boolean): IJSONConverter; overload;
 
-    function JSON(json: TJSONArray): IJSONConverter; overload;
-    function JSON(json: TJSONArray; const owns: Boolean): IJSONConverter; overload;
+    function JSON(JSON: TJSONArray): IJSONConverter; overload;
+    function JSON(JSON: TJSONArray; const owns: Boolean): IJSONConverter; overload;
   public
     class function New: IConverter; static;
   end;
@@ -117,7 +117,7 @@ begin
   if Assigned(dataSet) and (not dataSet.IsEmpty) then
     try
       Result := TJSONArray.Create;
-      bookMark := dataSet.Bookmark;
+      bookMark := dataSet.bookMark;
       dataSet.First;
       while not dataSet.Eof do
       begin
@@ -135,7 +135,6 @@ function TDataSetConverter.DataSetToJSONObject(dataSet: TDataSet): TJSONObject;
 var
   i: Integer;
   key: string;
-  timeStamp: TSQLTimeStamp;
   nestedDataSet: TDataSet;
   dft: TDataSetFieldType;
   bft: TBooleanFieldType;
@@ -148,9 +147,17 @@ begin
     Result := TJSONObject.Create;
     for i := 0 to Pred(dataSet.FieldCount) do
     begin
+
       if dataSet.Fields[i].Visible then
       begin
         key := dataSet.Fields[i].FieldName;
+
+        if dataSet.Fields[i].IsNull then
+        begin
+          Result.AddPair(key, TJSONNull.Create);
+          continue;
+        end;
+
         case dataSet.Fields[i].DataType of
           TFieldType.ftBoolean:
             begin
@@ -160,80 +167,44 @@ begin
                 bfInteger: Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsInteger));
               end;
             end;
-          TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint:
-            Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsInteger));
+          TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint: Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsInteger));
           TFieldType.ftLongWord, TFieldType.ftAutoInc:
             begin
-              if not dataSet.Fields[i].IsNull then
-                Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsWideString))
-              else
-                Result.AddPair(key, TJSONNull.Create);
+              Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsWideString))
             end;
-          TFieldType.ftLargeint:
-            Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
-          TFieldType.ftSingle, TFieldType.ftFloat:
-            Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsFloat));
+          TFieldType.ftLargeint: Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
+          TFieldType.ftSingle, TFieldType.ftFloat: Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsFloat));
           ftString, ftWideString, ftMemo, ftWideMemo:
             begin
-              if not dataSet.Fields[i].IsNull then
-                Result.AddPair(key, TJSONString.Create(dataSet.Fields[i].AsWideString))
-              else
-                Result.AddPair(key, TJSONNull.Create);
+              Result.AddPair(key, TJSONString.Create(dataSet.Fields[i].AsWideString))
             end;
-          TFieldType.ftDate:
+          TFieldType.ftDate, TFieldType.ftTimeStamp, TFieldType.ftDateTime, TFieldType.ftTime:
             begin
-              if not dataSet.Fields[i].IsNull then
-                Result.AddPair(key, TJSONString.Create(DateToISODate(dataSet.Fields[i].AsDateTime)))
-              else
-                Result.AddPair(key, TJSONNull.Create);
+              Result.AddPair(key, TJSONString.Create(DateToISO8601(dataSet.Fields[i].AsDateTime)))
             end;
-          TFieldType.ftTimeStamp, TFieldType.ftDateTime:
-            begin
-              if not dataSet.Fields[i].IsNull then
-                Result.AddPair(key, TJSONString.Create(DateTimeToISOTimeStamp(dataSet.Fields[i].AsDateTime)))
-              else
-                Result.AddPair(key, TJSONNull.Create);
-            end;
-          TFieldType.ftTime:
-            begin
-              if not dataSet.Fields[i].IsNull then
-              begin
-                timeStamp := dataSet.Fields[i].AsSQLTimeStamp;
-                Result.AddPair(key, TJSONString.Create(SQLTimeStampToStr('hh:nn:ss', timeStamp)));
-              end
-              else
-                Result.AddPair(key, TJSONNull.Create);
-            end;
+
           TFieldType.ftCurrency:
             begin
-              if not dataSet.Fields[i].IsNull then
-                Result.AddPair(key, TJSONString.Create(FormatCurr('0.00##', dataSet.Fields[i].AsCurrency)))
-              else
-                Result.AddPair(key, TJSONNull.Create);
+              Result.AddPair(key, TJSONString.Create(FormatCurr('0.00##', dataSet.Fields[i].AsCurrency)))
             end;
           TFieldType.ftFMTBcd, TFieldType.ftBCD:
             begin
-              if not dataSet.Fields[i].IsNull then
-                Result.AddPair(key, TJSONNumber.Create(BcdToDouble(dataSet.Fields[i].AsBcd)))
-              else
-                Result.AddPair(key, TJSONNull.Create);
+              Result.AddPair(key, TJSONNumber.Create(BcdToDouble(dataSet.Fields[i].AsBcd)))
             end;
           TFieldType.ftDataSet:
             begin
               dft := DataSetFieldToType(TDataSetField(dataSet.Fields[i]));
-              nestedDataSet := TDataSetField(dataSet.Fields[i]).NestedDataSet;
+              nestedDataSet := TDataSetField(dataSet.Fields[i]).nestedDataSet;
               case dft of
-                dfJSONObject:
-                  Result.AddPair(key, DataSetToJSONObject(nestedDataSet));
-                dfJSONArray:
-                  Result.AddPair(key, DataSetToJSONArray(nestedDataSet));
+                dfJSONObject: Result.AddPair(key, DataSetToJSONObject(nestedDataSet));
+                dfJSONArray: Result.AddPair(key, DataSetToJSONArray(nestedDataSet));
               end;
             end;
           TFieldType.ftGraphic, TFieldType.ftBlob, TFieldType.ftStream:
             begin
               ms := TMemoryStream.Create;
               try
-                TBlobField(dataSet.Fields[I]).SaveToStream(ms);
+                TBlobField(dataSet.Fields[i]).SaveToStream(ms);
                 ms.Position := 0;
                 ss := TStringStream.Create;
                 try
@@ -246,8 +217,7 @@ begin
                 ms.Free;
               end;
             end;
-        else
-          raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [key]);
+        else raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [key]);
         end;
       end;
     end;
@@ -308,6 +278,8 @@ begin
       jo.AddPair('FieldName', TJSONString.Create(dataSet.Fields[i].FieldName));
       jo.AddPair('DataType', TJSONString.Create(GetEnumName(TypeInfo(TFieldType), Integer(dataSet.Fields[i].DataType))));
       jo.AddPair('Size', TJSONNumber.Create(dataSet.Fields[i].Size));
+      jo.AddPair('Key', TJSONBool.Create(pfInKey in dataSet.Fields[i].ProviderFlags));
+      jo.AddPair('Origin', TJSONString.Create(dataSet.Fields[i].Origin));
       Result.AddElement(jo);
     end;
   end;
@@ -348,27 +320,28 @@ begin
   fJSONArray := nil;
 end;
 
-procedure TJSONConverter.JSONArrayToDataSet(json: TJSONArray; dataSet: TDataSet; const isRecord: Boolean);
+procedure TJSONConverter.JSONArrayToDataSet(JSON: TJSONArray; dataSet: TDataSet; const isRecord: Boolean; const OwnerControl: Boolean);
 var
   jv: TJSONValue;
   recNo: Integer;
 begin
-  if Assigned(json) and Assigned(dataSet) then
+  if Assigned(JSON) and Assigned(dataSet) then
   begin
     recNo := 0;
-    for jv in json do
+    for jv in JSON do
     begin
       if not dataSet.IsEmpty then
         Inc(recNo);
       if (jv is TJSONArray) then
-        JSONArrayToDataSet(jv as TJSONArray, dataSet, isRecord)
+        JSONArrayToDataSet(jv as TJSONArray, dataSet, isRecord, OwnerControl)
       else
-        JSONObjectToDataSet(jv as TJSONObject, dataSet, recNo, isRecord);
+        JSONObjectToDataSet(jv as TJSONObject, dataSet, recNo, isRecord, OwnerControl);
     end;
   end;
 end;
 
-procedure TJSONConverter.JSONObjectToDataSet(json: TJSONObject; dataSet: TDataSet; const recNo: Integer; const isRecord: Boolean);
+procedure TJSONConverter.JSONObjectToDataSet(JSON: TJSONObject; dataSet: TDataSet; const recNo: Integer; const isRecord: Boolean;
+  const OwnerControl: Boolean);
 var
   field: TField;
   jv: TJSONValue;
@@ -378,138 +351,110 @@ var
   ss: TStringStream;
   sm: TMemoryStream;
 begin
-  if Assigned(json) and Assigned(dataSet) then
+  if Assigned(JSON) and Assigned(dataSet) then
   begin
     if (recNo > 0) and (dataSet.RecordCount > 1) then
-      dataSet.RecNo := recNo;
+      dataSet.recNo := recNo;
 
-    if isRecord then
-      dataSet.Edit
-    else
-      dataSet.Append;
+    if not OwnerControl then
+    begin
+      if isRecord then
+        dataSet.Edit
+      else
+        dataSet.Append;
+    end;
 
     for field in dataSet.Fields do
     begin
-      if Assigned(json.Get(field.FieldName)) then
-        jv := json.Get(field.FieldName).JsonValue
+      if Assigned(JSON.Get(field.FieldName)) then
+        jv := JSON.Get(field.FieldName).JsonValue
       else
-        Continue;
+        continue;
+
       if field.ReadOnly then
-        Continue;
+        continue;
+
+      if jv is TJSONNull then
+      begin
+        field.Clear;
+        continue;
+      end;
+
       case field.DataType of
         TFieldType.ftBoolean:
           begin
-            if jv is TJSONNull then
-              field.Clear
-            else if jv.TryGetValue<Boolean>(booleanValue) then
+            if jv.TryGetValue<Boolean>(booleanValue) then
               field.AsBoolean := booleanValue;
           end;
         TFieldType.ftInteger, TFieldType.ftSmallint, TFieldType.ftShortint, TFieldType.ftLongWord:
           begin
-            if jv is TJSONNull then
-              field.Clear
-            else
-              field.AsInteger := StrToIntDef(jv.Value, 0);
+            field.AsInteger := StrToIntDef(jv.Value, 0);
           end;
         TFieldType.ftLargeint, TFieldType.ftAutoInc:
           begin
-            if jv is TJSONNull then
-              field.Clear
-            else
-              field.AsLargeInt := StrToInt64Def(jv.Value, 0);
+            field.AsLargeInt := StrToInt64Def(jv.Value, 0);
           end;
         TFieldType.ftCurrency:
           begin
-            if jv is TJSONNull then
-              field.Clear
-            else
-              field.AsCurrency := StrToCurr(jv.Value);
+            field.AsCurrency := StrToCurr(jv.Value);
           end;
         TFieldType.ftFloat, TFieldType.ftFMTBcd, TFieldType.ftBCD, TFieldType.ftSingle:
           begin
-            if jv is TJSONNull then
-              field.Clear
-            else
-              field.AsFloat := StrToFloat(jv.Value);
+            field.AsFloat := StrToFloat(jv.Value);
           end;
         ftString, ftWideString, ftMemo, ftWideMemo:
           begin
-            if jv is TJSONNull then
-              field.Clear
-            else
-              field.AsString := jv.Value;
+            field.AsString := jv.Value;
           end;
-        TFieldType.ftDate:
+        TFieldType.ftDate, TFieldType.ftTimeStamp, TFieldType.ftDateTime, TFieldType.ftTime:
           begin
-            if jv is TJSONNull then
-              field.Clear
-            else
-              field.AsDateTime := ISODateToDate(jv.Value);
-          end;
-        TFieldType.ftTimeStamp, TFieldType.ftDateTime:
-          begin
-            if jv is TJSONNull then
-              field.Clear
-            else
-              field.AsDateTime := ISOTimeStampToDateTime(jv.Value);
-          end;
-        TFieldType.ftTime:
-          begin
-            if jv is TJSONNull then
-              field.Clear
-            else
-              field.AsDateTime := ISOTimeToTime(jv.Value);
+            field.AsDateTime := ISO8601ToDate(jv.Value);
           end;
         TFieldType.ftDataSet:
           begin
             dft := DataSetFieldToType(TDataSetField(field));
-            nestedDataSet := TDataSetField(field).NestedDataSet;
+            nestedDataSet := TDataSetField(field).nestedDataSet;
             case dft of
-              dfJSONObject:
-                JSONObjectToDataSet(jv as TJSONObject, nestedDataSet, 0, True);
+              dfJSONObject: JSONObjectToDataSet(jv as TJSONObject, nestedDataSet, 0, True, OwnerControl);
               dfJSONArray:
                 begin
                   nestedDataSet.First;
                   while not nestedDataSet.Eof do
                     nestedDataSet.Delete;
-                  JSONArrayToDataSet(jv as TJSONArray, nestedDataSet, False);
+                  JSONArrayToDataSet(jv as TJSONArray, nestedDataSet, False, OwnerControl);
                 end;
             end;
           end;
         TFieldType.ftGraphic, TFieldType.ftBlob, TFieldType.ftStream:
           begin
-            if jv is TJSONNull then
-              field.Clear
-            else
-            begin
-              ss := TStringStream.Create((Jv as TJSONString).Value);
+            ss := TStringStream.Create((jv as TJSONString).Value);
+            try
+              ss.Position := 0;
+              sm := TMemoryStream.Create;
               try
-                ss.Position := 0;
-                sm := TMemoryStream.Create;
-                try
-                  TNetEncoding.Base64.Decode(ss, sm);
-                  TBlobField(Field).LoadFromStream(sm);
-                finally
-                  sm.Free;
-                end;
+                TNetEncoding.Base64.Decode(ss, sm);
+                TBlobField(field).LoadFromStream(sm);
               finally
-                ss.Free;
+                sm.Free;
               end;
+            finally
+              ss.Free;
             end;
           end;
-      else
-        raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [field.FieldName]);
+      else raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [field.FieldName]);
       end;
     end;
-    dataSet.Post;
+
+    if not OwnerControl then
+      dataSet.Post;
   end;
 end;
 
-procedure TJSONConverter.JSONToStructure(json: TJSONArray; dataSet: TDataSet);
+procedure TJSONConverter.JSONToStructure(JSON: TJSONArray; dataSet: TDataSet);
 var
   jv: TJSONValue;
 begin
-  if Assigned(json) and Assigned(dataSet) then
+  if Assigned(JSON) and Assigned(dataSet) then
   begin
     if dataSet.Active then
       raise EDataSetConverterException.Create('The DataSet can not be active.');
@@ -517,13 +462,10 @@ begin
     if (dataSet.FieldCount > 0) then
       raise EDataSetConverterException.Create('The DataSet can not have predefined Fields.');
 
-    for jv in json do
+    for jv in JSON do
     begin
-      NewDataSetField(dataSet, 
-        TFieldType(GetEnumValue(TypeInfo(TFieldType), (jv as TJSONObject).GetValue('DataType').Value)), 
-        (jv as TJSONObject).GetValue('FieldName').Value, 
-        StrToIntDef((jv as TJSONObject).GetValue('Size').Value, 0)
-        );
+      NewDataSetField(dataSet, TFieldType(GetEnumValue(TypeInfo(TFieldType), jv.GetValue<string>('DataType'))), jv.GetValue<string>('FieldName'),
+        StrToIntDef(TJSONObject(jv).GetValue<string>('Size'), 0), jv.GetValue<string>('Origin'), '', jv.GetValue<Boolean>('Key'));
     end;
   end;
 end;
@@ -533,47 +475,47 @@ begin
   Result := TJSONConverter.Create;
 end;
 
-function TJSONConverter.Source(json: TJSONObject; const owns: Boolean): IJSONConverter;
+function TJSONConverter.Source(JSON: TJSONObject; const owns: Boolean): IJSONConverter;
 begin
   ClearJSONs;
-  fJSONObject := json;
+  fJSONObject := JSON;
   fOwns := owns;
   Result := Self;
 end;
 
-function TJSONConverter.Source(json: TJSONObject): IJSONConverter;
+function TJSONConverter.Source(JSON: TJSONObject): IJSONConverter;
 begin
-  Result := Source(json, false);
+  Result := Source(JSON, False);
 end;
 
-function TJSONConverter.Source(json: TJSONArray; const owns: Boolean): IJSONConverter;
+function TJSONConverter.Source(JSON: TJSONArray; const owns: Boolean): IJSONConverter;
 begin
   ClearJSONs;
-  fJSONArray := json;
+  fJSONArray := JSON;
   fOwns := owns;
   Result := Self;
 end;
 
-function TJSONConverter.Source(json: TJSONArray): IJSONConverter;
+function TJSONConverter.Source(JSON: TJSONArray): IJSONConverter;
 begin
-  Result := Source(json, false);
+  Result := Source(JSON, False);
 end;
 
-procedure TJSONConverter.ToDataSet(dataSet: TDataSet);
+procedure TJSONConverter.ToDataSet(dataSet: TDataSet; const OwnerControl: Boolean);
 begin
   if Assigned(fJSONObject) then
-    JSONObjectToDataSet(fJSONObject, dataSet, 0, fIsRecord)
+    JSONObjectToDataSet(fJSONObject, dataSet, 0, fIsRecord, OwnerControl)
   else if Assigned(fJSONArray) then
-    JSONArrayToDataSet(fJSONArray, dataSet, fIsRecord)
+    JSONArrayToDataSet(fJSONArray, dataSet, fIsRecord, OwnerControl)
   else
     raise EDataSetConverterException.Create('JSON Value Uninformed.');
 end;
 
-procedure TJSONConverter.ToRecord(dataSet: TDataSet);
+procedure TJSONConverter.ToRecord(dataSet: TDataSet; const OwnerControl:Boolean);
 begin
   fIsRecord := True;
   try
-    ToDataSet(dataSet);
+    ToDataSet(dataSet, OwnerControl);
   finally
     fIsRecord := False;
   end;
@@ -591,29 +533,29 @@ end;
 
 { TConverter }
 
-function TConverter.DataSet: IDataSetConverter;
+function TConverter.dataSet: IDataSetConverter;
 begin
   Result := TDataSetConverter.New;
 end;
 
-function TConverter.DataSet(dataSet: TDataSet): IDataSetConverter;
+function TConverter.dataSet(dataSet: TDataSet): IDataSetConverter;
 begin
-  Result := Self.DataSet.Source(dataSet);
+  Result := Self.dataSet.Source(dataSet);
 end;
 
-function TConverter.DataSet(dataSet: TDataSet; const owns: Boolean): IDataSetConverter;
+function TConverter.dataSet(dataSet: TDataSet; const owns: Boolean): IDataSetConverter;
 begin
-  Result := Self.DataSet.Source(dataSet, owns);
+  Result := Self.dataSet.Source(dataSet, owns);
 end;
 
-function TConverter.JSON(json: TJSONObject; const owns: Boolean): IJSONConverter;
+function TConverter.JSON(JSON: TJSONObject; const owns: Boolean): IJSONConverter;
 begin
-  Result := Self.JSON.Source(json, owns);
+  Result := Self.JSON.Source(JSON, owns);
 end;
 
-function TConverter.JSON(json: TJSONObject): IJSONConverter;
+function TConverter.JSON(JSON: TJSONObject): IJSONConverter;
 begin
-  Result := Self.JSON.Source(json);
+  Result := Self.JSON.Source(JSON);
 end;
 
 function TConverter.JSON: IJSONConverter;
@@ -621,14 +563,14 @@ begin
   Result := TJSONConverter.New;
 end;
 
-function TConverter.JSON(json: TJSONArray; const owns: Boolean): IJSONConverter;
+function TConverter.JSON(JSON: TJSONArray; const owns: Boolean): IJSONConverter;
 begin
-  Result := Self.JSON.Source(json, owns);
+  Result := Self.JSON.Source(JSON, owns);
 end;
 
-function TConverter.JSON(json: TJSONArray): IJSONConverter;
+function TConverter.JSON(JSON: TJSONArray): IJSONConverter;
 begin
-  Result := Self.JSON.Source(json);
+  Result := Self.JSON.Source(JSON);
 end;
 
 class function TConverter.New: IConverter;
@@ -637,4 +579,3 @@ begin
 end;
 
 end.
-
