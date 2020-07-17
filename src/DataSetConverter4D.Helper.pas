@@ -13,24 +13,24 @@ type
   TDataSetConverterHelper = class helper for TDataSet
   public
     function AsJSONObject: TJSONObject;
-    function AsJSONArray: TJSONArray;
+    function AsJSONArray(const AKeysInLowerCase: Boolean = False): TJSONArray;
 
     function AsJSONObjectString: string;
     function AsJSONArrayString: string;
 
-    procedure FromJSONObject(JSON: TJSONObject);
-    procedure FromJSONArray(JSON: TJSONArray);
+    procedure FromJSONObject(json: TJSONObject);
+    procedure FromJSONArray(json: TJSONArray);
 
-    procedure RecordFromJSONObject(JSON: TJSONObject);
+    procedure RecordFromJSONObject(json: TJSONObject);
   end;
 
 implementation
 
 { TDataSetConverterHelper }
 
-function TDataSetConverterHelper.AsJSONArray: TJSONArray;
+function TDataSetConverterHelper.AsJSONArray(const AKeysInLowerCase: Boolean): TJSONArray;
 begin
-  Result := TConverter.New.DataSet(Self).AsJSONArray;
+  Result := TConverter.New.DataSet(Self).AsJSONArray(AKeysInLowerCase);
 end;
 
 function TDataSetConverterHelper.AsJSONArrayString: string;
@@ -62,19 +62,19 @@ begin
   end;
 end;
 
-procedure TDataSetConverterHelper.FromJSONArray(JSON: TJSONArray);
+procedure TDataSetConverterHelper.FromJSONArray(json: TJSONArray);
 begin
-  TConverter.New.JSON(JSON).ToDataSet(Self, False);
+  TConverter.New.JSON(json).ToDataSet(Self);
 end;
 
-procedure TDataSetConverterHelper.FromJSONObject(JSON: TJSONObject);
+procedure TDataSetConverterHelper.FromJSONObject(json: TJSONObject);
 begin
-  TConverter.New.JSON(JSON).ToDataSet(Self, False);
+  TConverter.New.JSON(json).ToDataSet(Self);
 end;
 
-procedure TDataSetConverterHelper.RecordFromJSONObject(JSON: TJSONObject);
+procedure TDataSetConverterHelper.RecordFromJSONObject(json: TJSONObject);
 begin
-  TConverter.New.JSON(JSON).ToRecord(Self, False);
+  TConverter.New.JSON(json).ToRecord(Self);
 end;
 
 end.
