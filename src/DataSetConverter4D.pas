@@ -20,7 +20,8 @@ type
     function Source(dataSet: TDataSet; const owns: Boolean): IDataSetConverter; overload;
 
     function AsJSONObject: TJSONObject;
-    function AsJSONArray(const AKeysInLowerCase: Boolean = False): TJSONArray;
+    function AsJSONArray: TJSONArray;
+    function AsJSONStructure: TJSONArray;
   end;
 
   IJSONConverter = interface
@@ -33,6 +34,7 @@ type
 
     procedure ToDataSet(dataSet: TDataSet);
     procedure ToRecord(dataSet: TDataSet);
+    procedure ToStructure(dataSet: TDataSet);
   end;
 
   IConverter = interface

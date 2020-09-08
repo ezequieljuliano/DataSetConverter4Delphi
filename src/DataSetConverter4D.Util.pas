@@ -18,11 +18,12 @@ function ISODateToDate(const date: string): TDate;
 function ISOTimeToTime(const time: string): TTime;
 
 function NewDataSetField(dataSet: TDataSet; const fieldType: TFieldType; const fieldName: string;
-  const size: Integer = 0; const origin: string = ''): TField;
+  const size: Integer = 0; const origin: string = ''; const displaylabel: string = ''): TField;
 
 function BooleanToJSON(const value: Boolean): TJSONValue;
 function BooleanFieldToType(const booleanField: TBooleanField): TBooleanFieldType;
 function DataSetFieldToType(const dataSetField: TDataSetField): TDataSetFieldType;
+function MakeValidIdent(const s: string): string;
 
 implementation
 
@@ -64,7 +65,7 @@ begin
 end;
 
 function NewDataSetField(dataSet: TDataSet; const fieldType: TFieldType; const fieldName: string;
-  const size: Integer = 0; const origin: string = ''): TField;
+  const size: Integer = 0; const origin: string = ''; const displaylabel: string = ''): TField;
 begin
   Result := DefaultFieldClasses[fieldType].Create(dataSet);
   Result.FieldName := fieldName;
@@ -74,9 +75,11 @@ begin
 
   Result.FieldKind := fkData;
   Result.DataSet := dataSet;
-  Result.Name := dataSet.Name + Result.FieldName;
+  Result.Name := MakeValidIdent(dataSet.Name + Result.FieldName);
   Result.Size := size;
   Result.Origin := origin;
+  if not(displaylabel.IsEmpty) then
+    Result.DisplayLabel := displaylabel;
 
   if (fieldType in [ftString, ftWideString]) and (size <= 0) then
     raise EDataSetConverterException.CreateFmt('Size not defined for field "%s".', [fieldName]);
@@ -116,6 +119,31 @@ begin
   for index := Ord(Low(TDataSetFieldType)) to Ord(High(TDataSetFieldType)) do
     if (LowerCase(DESC_DATASET_FIELD_TYPE[TDataSetFieldType(index)]) = LowerCase(origin)) then
       Exit(TDataSetFieldType(index));
+end;
+
+function MakeValidIdent(const s: string): string;
+var
+  x: Integer;
+  c: Char;
+begin
+  SetLength(Result, Length(s));
+  x := 0;
+
+  for c in s do
+  begin
+    if CharInSet(c, ['A'..'Z', 'a'..'z', '0'..'9', '_']) then
+    begin
+      Inc(x);
+      Result[x] := c;
+    end;
+  end;
+
+  SetLength(Result, x);
+
+  if x = 0 then
+    Result := '_'
+  else if CharInSet(Result[1], ['0'..'9']) then
+    Result := '_' + Result;
 end;
 
 end.

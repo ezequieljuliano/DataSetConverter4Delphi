@@ -13,7 +13,7 @@ type
   TDataSetConverterHelper = class helper for TDataSet
   public
     function AsJSONObject: TJSONObject;
-    function AsJSONArray(const AKeysInLowerCase: Boolean = False): TJSONArray;
+    function AsJSONArray: TJSONArray;
 
     function AsJSONObjectString: string;
     function AsJSONArrayString: string;
@@ -28,9 +28,9 @@ implementation
 
 { TDataSetConverterHelper }
 
-function TDataSetConverterHelper.AsJSONArray(const AKeysInLowerCase: Boolean): TJSONArray;
+function TDataSetConverterHelper.AsJSONArray: TJSONArray;
 begin
-  Result := TConverter.New.DataSet(Self).AsJSONArray(AKeysInLowerCase);
+  Result := TConverter.New.DataSet(Self).AsJSONArray;
 end;
 
 function TDataSetConverterHelper.AsJSONArrayString: string;
