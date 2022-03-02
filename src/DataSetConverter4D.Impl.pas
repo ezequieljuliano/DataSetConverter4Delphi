@@ -246,6 +246,10 @@ begin
                 ms.Free;
               end;
             end;
+          TFieldType.ftGuid:
+          begin
+            Result.AddPair(key, DataSet.Fields[I].AsString);
+          end;
         else
           raise EDataSetConverterException.CreateFmt('Cannot find type for field "%s"', [key]);
         end;
