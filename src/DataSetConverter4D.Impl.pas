@@ -434,7 +434,8 @@ begin
             if jv is TJSONNull then
               field.Clear
             else
-              field.AsFloat := StrToFloat(jv.Value);
+//              field.AsFloat := StrToFloat(jv.Value);
+              field.AsFloat := jv.GetValue<Double>;
           end;
         ftString, ftWideString, ftMemo, ftWideMemo:
           begin
