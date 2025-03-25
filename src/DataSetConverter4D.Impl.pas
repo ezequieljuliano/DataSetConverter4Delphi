@@ -141,10 +141,8 @@ var
   bft: TBooleanFieldType;
   ms: TMemoryStream;
   ss: TStringStream;
-  fs: TFormatSettings;
 begin
   Result := nil;
-  fs.DecimalSeparator := '.';
   if Assigned(dataSet) and (not dataSet.IsEmpty) then
   begin
     Result := TJSONObject.Create;
@@ -174,7 +172,7 @@ begin
           TFieldType.ftLargeint:
             Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsLargeInt));
           TFieldType.ftSingle, TFieldType.ftFloat:
-            Result.AddPair(key, TJSONNumber.Create(FloatToStr(dataSet.Fields[i].AsFloat, fs)));
+            Result.AddPair(key, TJSONNumber.Create(dataSet.Fields[i].AsFloat));
           ftString, ftWideString, ftMemo, ftWideMemo:
             begin
               if not dataSet.Fields[i].IsNull then
@@ -216,7 +214,7 @@ begin
           TFieldType.ftFMTBcd, TFieldType.ftBCD:
             begin
               if not dataSet.Fields[i].IsNull then
-                Result.AddPair(key, TJSONNumber.Create(BcdToStr(dataSet.Fields[i].AsBcd, fs)))
+                Result.AddPair(key, TJSONNumber.Create(BcdToDouble(dataSet.Fields[i].AsBcd)))
               else
                 Result.AddPair(key, TJSONNull.Create);
             end;
@@ -436,8 +434,7 @@ begin
             if jv is TJSONNull then
               field.Clear
             else
-//              field.AsFloat := StrToFloat(jv.Value);
-              field.AsFloat := jv.GetValue<Double>;
+              field.AsFloat := StrToFloat(jv.Value);
           end;
         ftString, ftWideString, ftMemo, ftWideMemo:
           begin
