@@ -38,6 +38,7 @@ type
     procedure TestConvertStructureToJSON;
     procedure TestConvertJSONToStructure;
     procedure TestConvertDataSetToJSONBasicInvisibleFields;
+    procedure TestConvertJsonToFDMemTable_PR_32;
   end;
 
 implementation
@@ -231,7 +232,7 @@ const
     '{"Id":1,"Description":"Sales 1","Date":"2014-01-22","Time":"14:03:03",' +
     '"Customers":{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"},' +
     '"Products":[{"Id":1,"Description":"Product 1","Value":100},' +
-    '{"Id":2,"Description":"Product 2","Value":200}]}';
+    '{"Id":2,"Description":"Product 2","Value":200.123456789}]}';
 var
   jo: TJSONObject;
 begin
@@ -256,7 +257,7 @@ begin
   fCdsProducts.Append;
   fCdsProducts.FieldByName('Id').AsInteger := 2;
   fCdsProducts.FieldByName('Description').AsString := 'Product 2';
-  fCdsProducts.FieldByName('Value').AsFloat := 200;
+  fCdsProducts.FieldByName('Value').AsFloat := 200.123456789;
   fCdsProducts.Post;
 
   fCdsSales.Post;
@@ -494,7 +495,7 @@ begin
     cds.CreateDataSet;
 
     cds.Append;
-    cds.FieldByName('Value').AsFloat := 50;
+    cds.FieldByName('Value').AsBCD := 50;
     cds.Post;
 
     jo := TConverter.New.DataSet(cds).AsJSONObject;
@@ -508,7 +509,7 @@ begin
     try
       TConverter.New.JSON(jo).ToDataSet(cds);
       CheckFalse(cds.IsEmpty);
-      CheckTrue(cds.FieldByName('Value').AsFloat = 50);
+      CheckTrue(cds.FieldByName('Value').AsBCD = 50);
     finally
       jo.Free;
     end;
@@ -551,6 +552,74 @@ begin
       jo.Free;
     end;
   finally
+    cds.Free;
+  end;
+end;
+
+procedure TTestsDataSetConverter.TestConvertJsonToFDMemTable_PR_32;
+const
+  JSON =
+    '{' +
+      '"Structure": [' +
+        '{' +
+          '"FieldName": "Id",' +
+          '"DataType": "ftInteger",' +
+          '"Size": 0' +
+        '},{' +
+          '"FieldName": "Description",' +
+          '"DataType": "ftString",' +
+          '"Size": 100' +
+        '},{' +
+          '"FieldName": "Value",' +
+          '"DataType": "ftBCD",' +
+          '"Size": 2' +
+        '}' +
+      '],' +
+      '"Products": [' +
+        '{' +
+          '"Id": 1,' +
+          '"Description": "Product 1",' +
+          '"Value": 100.12' +
+        '},{' +
+          '"Id": 2,' +
+          '"Description": "Product 2",' +
+          '"Value": 200' +
+        '}' +
+      ']' +
+    '}';
+var
+  jo: TJSONObject;
+  cds: TClientDataSet;
+begin
+  cds := TClientDataSet.Create(nil);
+  try
+    jo := TJSONObject.ParseJSONValue(TEncoding.UTF8.GetBytes(JSON), 0) as TJSONObject;
+    try
+      cds.Close;
+      cds.Fields.Clear;
+      TConverter.New.JSON(
+        jo.Values['Structure'].AsType<TJSONArray>).ToStructure(cds);
+      cds.CreateDataSet;
+      cds.Open;
+      CheckException(
+        procedure
+        begin
+          TConverter.New.JSON(jo.Values['Products'].AsType<TJSONArray>).ToDataSet(cds)
+        end, nil);
+      cds.First;
+      while not cds.Eof do
+      begin
+        if (cds.RecNo = 1) then
+          CheckEquals(100.12, cds.FieldByName('Value').AsFloat, 2)
+        else if (cds.RecNo = 2) then
+          CheckEquals(200, cds.FieldByName('Value').AsFloat);
+        cds.Next;
+      end;
+    finally
+      jo.Free;
+    end;
+  finally
+    cds.Close;
     cds.Free;
   end;
 end;
