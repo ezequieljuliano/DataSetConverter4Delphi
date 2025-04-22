@@ -113,10 +113,9 @@ function TDataSetConverter.DataSetToJSONArray(dataSet: TDataSet): TJSONArray;
 var
   bookMark: TBookmark;
 begin
-  Result := nil;
+  Result := TJSONArray.Create;
   if Assigned(dataSet) and (not dataSet.IsEmpty) then
     try
-      Result := TJSONArray.Create;
       bookMark := dataSet.Bookmark;
       dataSet.First;
       while not dataSet.Eof do
@@ -143,11 +142,10 @@ var
   ss: TStringStream;
   fs: TFormatSettings;
 begin
-  Result := nil;
+  Result := TJSONObject.Create;
   if Assigned(dataSet) and (not dataSet.IsEmpty) then
   begin
     fs.DecimalSeparator := '.';
-    Result := TJSONObject.Create;
     for i := 0 to Pred(dataSet.FieldCount) do
     begin
       if dataSet.Fields[i].Visible then
@@ -304,10 +302,9 @@ var
   i: Integer;
   jo: TJSONObject;
 begin
-  Result := nil;
+  Result :=  TJSONArray.Create;
   if Assigned(dataSet) and (dataSet.FieldCount > 0) then
   begin
-    Result := TJSONArray.Create;
     for i := 0 to Pred(dataSet.FieldCount) do
     begin
       jo := TJSONObject.Create;
