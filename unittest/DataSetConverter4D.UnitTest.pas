@@ -48,6 +48,9 @@ implementation
 procedure TTestsDataSetConverter.SetUp;
 begin
   inherited;
+  FormatSettings.LongDateFormat := 'dd/mm/yyyy hh:nn:ss';
+  FormatSettings.DateSeparator := '/';
+
   fCdsSales := TClientDataSet.Create(nil);
   NewDataSetField(fCdsSales, ftInteger, 'Id');
   NewDataSetField(fCdsSales, ftString, 'Description', 100);
@@ -118,6 +121,8 @@ end;
 
 procedure TTestsDataSetConverter.TestConvertDataSetToJSONBasic;
 const
+  JSON_ARRAY_EMPTY = '[]';
+  JSON_OBJECT_EMPTY = '{}';
   JSON_ARRAY =
     '[{"Id":1,"Name":"Customers 1","Birth":"2014-01-22 14:05:03"},' +
     '{"Id":2,"Name":"Customers 2","Birth":"2014-01-22 14:05:03"}]';
@@ -129,6 +134,9 @@ var
 begin
   fCdsCustomers.DataSetField := nil;
   fCdsCustomers.CreateDataSet;
+
+  CheckEqualsString(JSON_ARRAY_EMPTY, fCdsCustomers.AsJSONArrayString);
+  CheckEqualsString(JSON_OBJECT_EMPTY, fCdsCustomers.AsJSONObjectString);
 
   fCdsCustomers.Append;
   fCdsCustomers.FieldByName('Id').AsInteger := 1;
@@ -445,6 +453,8 @@ end;
 
 procedure TTestsDataSetConverter.TestConvertStructureToJSON;
 const
+  JSON_EMPTY = '[]';
+
   JSON = '[{' +
     '"FieldName":"Id",' +
     '"DataType":"ftInteger",' +
@@ -464,6 +474,13 @@ var
 begin
   cds := TClientDataSet.Create(nil);
   try
+    ja := TConverter.New.DataSet(cds).AsJSONStructure;
+    try
+      CheckEqualsString(JSON_EMPTY, ja.ToString);
+    finally
+      ja.Free;
+    end;
+
     NewDataSetField(cds, ftInteger, 'Id');
     NewDataSetField(cds, ftString, 'Description', 100);
     NewDataSetField(cds, ftFloat, 'Value');
